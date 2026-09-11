@@ -1,14 +1,14 @@
 ---
 name: crm-sdk
-description: Operate a CRM (contacts, companies, deals, pipeline, search, reports) through the typed crm.sdk package — Postgres schema crm, no filesystem mount
+description: Operate a CRM (contacts, companies, deals, pipeline, search, reports) through the typed @bunkernineai/crm.sdk package — Postgres schema crm, no filesystem mount
 ---
 
 # crm.sdk
 
-This package exists so an agent can run the CRM. Import `crm.sdk`, call `createCrm`, then use typed methods. Do not `ls` a mount, do not spawn a `crm` binary, do not invent SQL.
+This package exists so an agent can run the CRM. Import `@bunkernineai/crm.sdk`, call `createCrm`, then use typed methods. Do not `ls` a mount, do not spawn a `crm` binary, do not invent SQL.
 
 ```ts
-import { createCrm } from 'crm.sdk'
+import { createCrm } from '@bunkernineai/crm.sdk'
 
 const crm = await createCrm({ connectionString: process.env.DATABASE_URL! })
 ```

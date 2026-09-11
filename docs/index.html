@@ -277,15 +277,15 @@
       text-transform: uppercase;
       letter-spacing: 2px;
     }
-    .sponsor-card .duet-name {
+    .sponsor-card .creator-name {
       margin-bottom: 12px;
       font-size: 32px;
       font-weight: 700;
     }
-    .sponsor-card .duet-name a {
+    .sponsor-card .creator-name a {
       color: var(--text);
     }
-    .sponsor-card .duet-name a:hover {
+    .sponsor-card .creator-name a:hover {
       color: var(--accent);
     }
     .sponsor-card .desc {
@@ -350,9 +350,9 @@
         >
         <div class="links">
           <a href="https://github.com/bunkernine/crm.sdk">GitHub</a>
-          <a href="https://www.npmjs.com/package/crm.sdk">npm</a>
+          <a href="https://www.npmjs.com/package/@bunkernineai/crm.sdk">npm</a>
           <a href="https://github.com/bunkernine/crm.sdk#install">Docs</a>
-          <a href="https://duet.so">Duet</a>
+          <a href="https://sheikhsifat.com">Sheikh Sifat</a>
         </div>
       </div>
     </nav>
@@ -367,7 +367,7 @@
         </p>
         <div class="install-box">
           <span class="prompt">$</span>
-          npm install crm.sdk
+          npm install @bunkernineai/crm.sdk
         </div>
         <p class="sub">
           Typed methods in, records or thrown errors out. No MCP. No FUSE.
@@ -398,7 +398,7 @@
               <code>.cursor/skills/crm-sdk/</code> (or
               <code>claude skills add</code> from GitHub). The skill is the
               method contract. Installing it does not replace
-              <code>npm install crm.sdk</code>.
+              <code>npm install @bunkernineai/crm.sdk</code>.
             </p>
           </div>
           <div class="feature-card">
@@ -503,7 +503,7 @@
           <div>
             <pre><span class="comment"># Cursor — project skill</span>
 <span class="line-prompt">$</span> mkdir -p .cursor/skills/crm-sdk
-<span class="line-prompt">$</span> <span class="cmd">cp</span> node_modules/crm.sdk/skills/SKILL.md \
+<span class="line-prompt">$</span> <span class="cmd">cp</span> node_modules/@bunkernineai/crm.sdk/skills/SKILL.md \
     .cursor/skills/crm-sdk/SKILL.md
 
 <span class="comment"># From this repo</span>
@@ -518,7 +518,7 @@
           </div>
           <div>
             <pre><span class="comment">// The skill tells the agent to import the package</span>
-<span class="cmd">import</span> { createCrm } <span class="cmd">from</span> <span class="string">"crm.sdk"</span>
+<span class="cmd">import</span> { createCrm } <span class="cmd">from</span> <span class="string">"@bunkernineai/crm.sdk"</span>
 
 <span class="cmd">const crm</span> = <span class="cmd">await createCrm</span>({
   connectionString: process.env.DATABASE_URL,
@@ -538,15 +538,16 @@
       <div class="container">
         <div class="sponsor-card">
           <div class="label">Created by</div>
-          <div class="duet-name"><a href="https://duet.so">Duet</a></div>
+          <div class="creator-name">
+            <a href="https://sheikhsifat.com">Sheikh Sifat</a>
+          </div>
           <p class="desc">
-            crm.sdk is created by <a href="https://duet.so">Duet</a> &mdash; a
-            cloud agent workspace where every user gets a private cloud computer
-            with a persistent, always-on AI agent. Install
-            <code>crm.sdk</code> in your app, copy the skill, and call
-            <code>createCrm</code>.
+            crm.sdk is created by
+            <a href="https://sheikhsifat.com">Sheikh Sifat</a>. Install
+            <code>@bunkernineai/crm.sdk</code> in your app, copy the skill, and
+            call <code>createCrm</code>.
           </p>
-          <a href="https://duet.so" class="cta">Try Duet &rarr;</a>
+          <a href="https://sheikhsifat.com" class="cta">sheikhsifat.com &rarr;</a>
         </div>
       </div>
     </section>
@@ -554,11 +555,11 @@
     <footer>
       <div class="container">
         <p>
-          MIT License &middot;
+          MIT License &middot; v1.0.1 &middot;
           <a href="https://github.com/bunkernine/crm.sdk">GitHub</a>
           &middot;
-          <a href="https://www.npmjs.com/package/crm.sdk">npm</a>
-          &middot; Created by <a href="https://duet.so">Duet</a>
+          <a href="https://www.npmjs.com/package/@bunkernineai/crm.sdk">npm</a>
+          &middot; Created by <a href="https://sheikhsifat.com">Sheikh Sifat</a>
         </p>
       </div>
     </footer>

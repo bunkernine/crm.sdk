@@ -1,6 +1,6 @@
 {
-  "name": "crm.sdk",
-  "version": "1.0.0",
+  "name": "@bunkernineai/crm.sdk",
+  "version": "1.0.1",
   "description": "Typed CRM SDK for AI agents",
   "author": "Sheikh Sifat",
   "license": "MIT",

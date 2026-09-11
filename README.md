@@ -5,7 +5,7 @@
 Agents import this package (or the host app wraps these methods). There is no MCP, REST, or FUSE layer.
 
 ```ts
-import { createCrm } from 'crm.sdk'
+import { createCrm } from '@bunkernineai/crm.sdk'
 
 const crm = await createCrm({
   connectionString: process.env.DATABASE_URL!,
@@ -23,25 +23,25 @@ await crm.report.stale({ days: 30 })
 await crm.close()
 ```
 
-> Original product by [Duet](https://duet.so) / David Zhang. Published as `crm.sdk` (unscoped). MIT.
+> Original product by [Duet](https://duet.so) / David Zhang. Published as `@bunkernineai/crm.sdk`. MIT.
 
 ## Install
 
 ```bash
-npm install crm.sdk
-# or: bun add crm.sdk
+npm install @bunkernineai/crm.sdk
+# or: bun add @bunkernineai/crm.sdk
 ```
 
-The skill does **not** replace the package. Agents still `import { createCrm } from 'crm.sdk'`. Postgres must be reachable. On first `createCrm`, the SDK runs `CREATE SCHEMA IF NOT EXISTS crm` and creates the four entity tables plus `search_index`.
+The skill does **not** replace the package. Agents still `import { createCrm } from '@bunkernineai/crm.sdk'`. Postgres must be reachable. On first `createCrm`, the SDK runs `CREATE SCHEMA IF NOT EXISTS crm` and creates the four entity tables plus `search_index`.
 
 ### Install as an agent skill
 
 The contract lives in [`skills/SKILL.md`](./skills/SKILL.md) (`name: crm-sdk`). Copy it into a Cursor skills directory so the agent can load it:
 
 ```bash
-# After npm install crm.sdk (project skill)
+# After npm install @bunkernineai/crm.sdk (project skill)
 mkdir -p .cursor/skills/crm-sdk
-cp node_modules/crm.sdk/skills/SKILL.md .cursor/skills/crm-sdk/SKILL.md
+cp node_modules/@bunkernineai/crm.sdk/skills/SKILL.md .cursor/skills/crm-sdk/SKILL.md
 
 # From this repo
 mkdir -p .cursor/skills/crm-sdk
