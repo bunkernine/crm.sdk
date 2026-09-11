@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>crm.cli — Your CRM is a filesystem</title>
+    <title>crm.sdk — Typed CRM for AI agents</title>
     <meta
       name="description"
-      content="A headless, CLI-first CRM for developers who do sales. Contacts, deals, and pipeline in a single SQLite file — mountable as a virtual filesystem."
+      content="A typed CRM SDK for AI agents. Contacts, deals, and pipeline in Postgres schema crm — createCrm(), not a filesystem mount."
     >
-    <meta property="og:title" content="crm.cli — Your CRM is a filesystem">
+    <meta property="og:title" content="crm.sdk — Typed CRM for AI agents">
     <meta
       property="og:description"
-      content="A headless, CLI-first CRM for developers. Single SQLite file, pipe-friendly, mountable as a virtual filesystem for AI agents."
+      content="Typed CRM SDK for agents. Postgres schema crm, createCrm methods, agent skill. No FUSE, no CLI binary."
     >
     <meta property="og:type" content="website">
     <link
@@ -223,33 +223,33 @@
       color: var(--text-muted);
     }
 
-    /* FUSE section */
-    .fuse-section {
+    /* Agent skill section */
+    .skill-section {
       padding: 60px 0;
       border-top: 1px solid var(--border);
     }
-    .fuse-section h2 {
+    .skill-section h2 {
       margin-bottom: 12px;
       font-size: 32px;
       font-weight: 700;
     }
-    .fuse-section > .container > p {
+    .skill-section > .container > p {
       max-width: 720px;
       margin-bottom: 32px;
       font-size: 16px;
       color: var(--text-muted);
     }
-    .fuse-layout {
+    .skill-layout {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 24px;
     }
     @media (max-width: 640px) {
-      .fuse-layout {
+      .skill-layout {
         grid-template-columns: 1fr;
       }
     }
-    .fuse-layout pre {
+    .skill-layout pre {
       font-size: 12px;
       line-height: 1.7;
     }
@@ -336,7 +336,7 @@
       }
       .features h2,
       .code-section h2,
-      .fuse-section h2 {
+      .skill-section h2 {
         font-size: 24px;
       }
     }
@@ -346,12 +346,12 @@
     <nav>
       <div class="container">
         <span class="logo"
-          >crm<span style="color:var(--accent)">.</span>cli</span
+          >crm<span style="color:var(--accent)">.</span>sdk</span
         >
         <div class="links">
-          <a href="https://github.com/dzhng/crm.cli">GitHub</a>
-          <a href="https://www.npmjs.com/package/@dzhng/crm.cli">npm</a>
-          <a href="https://github.com/dzhng/crm.cli#cli-reference">Docs</a>
+          <a href="https://github.com/bunkernine/crm.sdk">GitHub</a>
+          <a href="https://www.npmjs.com/package/crm.sdk">npm</a>
+          <a href="https://github.com/bunkernine/crm.sdk#install">Docs</a>
           <a href="https://duet.so">Duet</a>
         </div>
       </div>
@@ -359,46 +359,46 @@
 
     <section class="hero">
       <div class="container">
-        <h1>crm<span class="dot">.</span>cli</h1>
+        <h1>crm<span class="dot">.</span>sdk</h1>
         <p class="tagline">
-          A headless, CLI-first CRM for developers who do sales. Contacts,
-          deals, and pipeline in a single SQLite file &mdash; mountable as a
-          virtual filesystem so AI agents get full CRM access for free.
+          A typed CRM library for AI agents. Contacts, deals, and pipeline in
+          Postgres schema <code>crm</code> &mdash; call
+          <code>createCrm()</code>, not a filesystem mount.
         </p>
         <div class="install-box">
           <span class="prompt">$</span>
-          npm install -g @dzhng/crm.cli
+          npm install crm.sdk
         </div>
         <p class="sub">
-          No server. No Docker. No accounts. No GUI.
-          <a href="https://github.com/dzhng/crm.cli">View on GitHub &rarr;</a>
+          Typed methods in, records or thrown errors out. No MCP. No FUSE.
+          <a href="https://github.com/bunkernine/crm.sdk">View on GitHub &rarr;</a>
         </p>
       </div>
     </section>
 
     <section class="features">
       <div class="container">
-        <h2>Built for how you actually work</h2>
+        <h2>Built for how agents actually work</h2>
         <div class="feature-grid">
           <div class="feature-card">
-            <div class="icon">📂</div>
-            <h3>Your CRM is a filesystem</h3>
+            <div class="icon">📦</div>
+            <h3>Typed createCrm client</h3>
             <p>
-              Mount with <code>crm mount ~/crm</code> and every tool that reads
-              files &mdash; AI agents, shell scripts, editors &mdash; gets full
-              CRM access. No MCP servers, no API keys. The filesystem is the
-              universal API.
+              <code>createCrm({ connectionString })</code> returns
+              <code>crm.contact</code>, <code>crm.deal</code>,
+              <code>crm.search</code>, <code>crm.report</code>. Strongly typed
+              arguments in, records or thrown errors out. No MCP, no REST shim.
             </p>
           </div>
           <div class="feature-card">
             <div class="icon">🤖</div>
-            <h3>AI-native</h3>
+            <h3>Agent skill</h3>
             <p>
-              Point Claude Code, Codex, or any AI agent at
-              <code>~/crm</code>
-              and ask it to research your pipeline, draft outreach, or update
-              deals. The agent reads and writes JSON files &mdash; zero
-              integration code.
+              Copy <code>skills/SKILL.md</code> into
+              <code>.cursor/skills/crm-sdk/</code> (or
+              <code>claude skills add</code> from GitHub). The skill is the
+              method contract. Installing it does not replace
+              <code>npm install crm.sdk</code>.
             </p>
           </div>
           <div class="feature-card">
@@ -411,31 +411,31 @@
             </p>
           </div>
           <div class="feature-card">
-            <div class="icon">🔧</div>
-            <h3>Unix philosophy</h3>
+            <div class="icon">🔎</div>
+            <h3>Lookup by ref</h3>
             <p>
-              Every command outputs structured data. Pipe to <code>jq</code>,
-              <code>grep</code>, <code>awk</code>, or feed into scripts.
-              <code>--format json|csv|tsv|ids</code>
-              on everything. Composable by design.
+              Show and edit by id, email, phone (any common format), LinkedIn/X
+              handle, or website. IDs are prefixed
+              <code>ct_</code> / <code>co_</code> / <code>dl_</code> /
+              <code>ac_</code>.
             </p>
           </div>
           <div class="feature-card">
-            <div class="icon">💾</div>
-            <h3>Single SQLite file</h3>
+            <div class="icon">🐘</div>
+            <h3>Postgres schema crm</h3>
             <p>
-              Everything lives in <code>~/.crm/crm.db</code>. Back it up by
-              copying the file. Share it via git, Dropbox, or rsync. No server,
-              no network, no dependencies.
+              Four tables plus <code>search_index</code> in schema
+              <code>crm</code>. JSON arrays are <code>jsonb</code>. You pass a
+              connection string. No SQLite file, no FUSE mount.
             </p>
           </div>
           <div class="feature-card">
             <div class="icon">📊</div>
             <h3>Pipeline reports</h3>
             <p>
-              Built-in reports: pipeline summary, stage conversion rates, deal
-              velocity, weighted forecast, stale contacts, won/lost analysis.
-              All from the command line, all pipeable.
+              Built-in reports: pipeline summary, stage conversion, deal
+              velocity, weighted forecast, stale contacts, won/lost. Callable as
+              <code>crm.report.*</code>.
             </p>
           </div>
         </div>
@@ -446,115 +446,89 @@
       <div class="container">
         <h2>Quick start</h2>
         <p>
-          Install in one command, start managing contacts and deals in seconds.
+          Install the package, pass a Postgres URL, start managing contacts and
+          deals.
         </p>
         <div class="code-examples">
           <div class="code-example">
             <h3>Manage contacts</h3>
-            <pre
-            ><span class="comment"># Add a contact with full normalization</span>
-<span class="line-prompt">$</span> <span class="cmd">crm contact add</span> <span class="flag">--name</span> <span class="string">"Jane Doe"</span> \
-    <span class="flag">--email</span> jane@acme.com \
-    <span class="flag">--phone</span> <span class="string">"+1-212-555-1234"</span> \
-    <span class="flag">--linkedin</span> linkedin.com/in/janedoe \
-    <span class="flag">--company</span> Acme
-<span class="comment"># Phone → E.164, LinkedIn URL → handle, company auto-linked</span>
+            <pre><span class="comment">// Phone → E.164, LinkedIn URL → handle, company auto-linked</span>
+<span class="cmd">const crm</span> = <span class="cmd">await createCrm</span>({
+  connectionString: process.env.DATABASE_URL,
+})
 
-<span class="line-prompt">$</span> <span class="cmd">crm contact show</span> jane@acme.com
-<span class="line-prompt">$</span> <span class="cmd">crm contact show</span> <span class="string">"(212) 555-1234"</span>  <span class="comment"># same contact — any format works</span></pre>
+<span class="cmd">const id</span> = <span class="cmd">await crm.contact.add</span>({
+  name: <span class="string">"Jane Doe"</span>,
+  email: [<span class="string">"jane@acme.com"</span>],
+  phone: [<span class="string">"+1-212-555-1234"</span>],
+  linkedin: <span class="string">"linkedin.com/in/janedoe"</span>,
+  company: [<span class="string">"Acme"</span>],
+})
+
+<span class="cmd">await crm.contact.show</span>(<span class="string">"jane@acme.com"</span>)
+<span class="cmd">await crm.contact.show</span>(<span class="string">"(212) 555-1234"</span>)  <span class="comment">// same contact</span></pre>
           </div>
           <div class="code-example">
             <h3>Track deals</h3>
-            <pre
-            ><span class="line-prompt">$</span> <span class="cmd">crm deal add</span> <span class="flag">--title</span> <span class="string">"Acme Enterprise"</span> <span class="flag">--value</span> 50000 \
-    <span class="flag">--contact</span> jane@acme.com <span class="flag">--stage</span> qualified
+            <pre><span class="cmd">await crm.deal.add</span>({
+  title: <span class="string">"Acme Enterprise"</span>,
+  value: 50000,
+  contact: [<span class="string">"jane@acme.com"</span>],
+  stage: <span class="string">"qualified"</span>,
+})
 
-<span class="line-prompt">$</span> <span class="cmd">crm deal move</span> dl_01J8Z... <span class="flag">--stage</span> negotiation
-<span class="line-prompt">$</span> <span class="cmd">crm pipeline</span>
-<span class="comment"># Visual pipeline with counts, values, weighted totals</span>
-
-<span class="line-prompt">$</span> <span class="cmd">crm report</span> conversion
-<span class="comment"># Stage-to-stage conversion rates</span></pre>
+<span class="cmd">await crm.deal.move</span>(id, { stage: <span class="string">"negotiation"</span> })
+<span class="cmd">await crm.pipeline</span>()
+<span class="cmd">await crm.report.conversion</span>()</pre>
           </div>
           <div class="code-example">
-            <h3>Compose with Unix tools</h3>
-            <pre><span class="comment"># Bulk tag all contacts from Acme</span>
-<span class="line-prompt">$</span> <span class="cmd">crm contact list</span> <span class="flag">--company</span> Acme <span class="flag">--format</span> ids | xargs -I{} <span class="cmd">crm tag</span> {} enterprise
-
-<span class="comment"># Export pipeline as JSON, filter with jq</span>
-<span class="line-prompt">$</span> <span class="cmd">crm deal list</span> <span class="flag">--format</span> json | jq '.[] | select(.value > 10000)'
-
-<span class="comment"># Import from CSV</span>
-<span class="line-prompt">$</span> <span class="cmd">crm import</span> contacts leads.csv</pre>
+            <h3>Search, reports, import</h3>
+            <pre><span class="cmd">await crm.tag</span>(janeId, [<span class="string">"enterprise"</span>])
+<span class="cmd">await crm.find</span>(<span class="string">"fintech CTO"</span>)
+<span class="cmd">await crm.report.stale</span>({ days: 30 })
+<span class="cmd">await crm.import.contacts</span>(csvString)</pre>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="fuse-section">
+    <section class="skill-section">
       <div class="container">
-        <h2>Virtual filesystem for AI agents</h2>
+        <h2>Agent skill + SDK</h2>
         <p>
-          Mount the CRM and every AI agent gets instant access. No MCP servers,
-          no API keys, no integration code. Just files.
+          Give the agent the method contract, then call typed methods. No MCP,
+          no mount, no <code>ls ~/crm</code>.
         </p>
-        <div class="fuse-layout">
+        <div class="skill-layout">
           <div>
-            <pre><span class="comment"># Mount</span>
-<span class="line-prompt">$</span> <span class="cmd">crm mount</span> ~/crm
+            <pre><span class="comment"># Cursor — project skill</span>
+<span class="line-prompt">$</span> mkdir -p .cursor/skills/crm-sdk
+<span class="line-prompt">$</span> <span class="cmd">cp</span> node_modules/crm.sdk/skills/SKILL.md \
+    .cursor/skills/crm-sdk/SKILL.md
 
-<span class="comment"># Agent reads instructions first</span>
-<span class="line-prompt">$</span> cat ~/crm/llm.txt
+<span class="comment"># From this repo</span>
+<span class="line-prompt">$</span> <span class="cmd">cp</span> skills/SKILL.md .cursor/skills/crm-sdk/SKILL.md
 
-<span class="comment"># Browse contacts</span>
-<span class="line-prompt">$</span> ls ~/crm/contacts/
-<span class="line-prompt">$</span> cat ~/crm/contacts/ct_01...jane-doe.json
+<span class="comment"># Personal (all projects)</span>
+<span class="line-prompt">$</span> <span class="cmd">cp</span> skills/SKILL.md ~/.cursor/skills/crm-sdk/SKILL.md
 
-<span class="comment"># Look up by email or phone</span>
-<span class="line-prompt">$</span> cat ~/crm/contacts/_by-email/jane@acme.com.json
-<span class="line-prompt">$</span> cat ~/crm/contacts/_by-phone/+12125551234.json
-
-<span class="comment"># Pipeline stages</span>
-<span class="line-prompt">$</span> ls ~/crm/deals/_by-stage/qualified/
-
-<span class="comment"># Search via virtual files</span>
-<span class="line-prompt">$</span> cat ~/crm/search/<span class="string">"fintech CTO"</span>.json
-
-<span class="comment"># Reports</span>
-<span class="line-prompt">$</span> cat ~/crm/reports/forecast.json</pre>
+<span class="comment"># Claude Code</span>
+<span class="line-prompt">$</span> <span class="cmd">claude skills add</span> \
+    https://github.com/bunkernine/crm.sdk/tree/main/skills</pre>
           </div>
           <div>
-            <pre><span class="comment"># Filesystem layout</span>
-~/crm/
-├── llm.txt              <span class="comment"># agent instructions</span>
-├── contacts/
-│   ├── ct_01...jane-doe.json
-│   ├── _by-email/
-│   ├── _by-phone/       <span class="comment"># E.164 filenames</span>
-│   ├── _by-linkedin/
-│   ├── _by-company/
-│   └── _by-tag/
-├── companies/
-│   ├── co_01...acme-corp.json
-│   ├── _by-website/
-│   ├── _by-phone/
-│   └── _by-tag/
-├── deals/
-│   ├── dl_01...acme-enterprise.json
-│   ├── _by-stage/
-│   ├── _by-company/
-│   └── _by-tag/
-├── activities/
-│   ├── _by-contact/
-│   ├── _by-company/
-│   └── _by-type/
-├── reports/
-│   ├── pipeline.json
-│   ├── forecast.json
-│   └── stale.json
-├── search/              <span class="comment"># filename = query</span>
-├── pipeline.json
-└── tags.json</pre>
+            <pre><span class="comment">// The skill tells the agent to import the package</span>
+<span class="cmd">import</span> { createCrm } <span class="cmd">from</span> <span class="string">"crm.sdk"</span>
+
+<span class="cmd">const crm</span> = <span class="cmd">await createCrm</span>({
+  connectionString: process.env.DATABASE_URL,
+  phone: { default_country: <span class="string">"US"</span> },
+})
+
+<span class="cmd">await crm.contact.list</span>()
+<span class="cmd">await crm.report.stale</span>({ days: 14 })
+<span class="cmd">await crm.find</span>(<span class="string">"fintech CTO"</span>)
+<span class="cmd">await crm.close</span>()</pre>
           </div>
         </div>
       </div>
@@ -566,11 +540,11 @@
           <div class="label">Created by</div>
           <div class="duet-name"><a href="https://duet.so">Duet</a></div>
           <p class="desc">
-            crm.cli is created by <a href="https://duet.so">Duet</a> &mdash; a
+            crm.sdk is created by <a href="https://duet.so">Duet</a> &mdash; a
             cloud agent workspace where every user gets a private cloud computer
-            with a persistent, always-on AI agent. Set up crm.cli in your own
-            Duet workspace and run it with Claude Code or Codex in the cloud
-            &mdash; no local setup required.
+            with a persistent, always-on AI agent. Install
+            <code>crm.sdk</code> in your app, copy the skill, and call
+            <code>createCrm</code>.
           </p>
           <a href="https://duet.so" class="cta">Try Duet &rarr;</a>
         </div>
@@ -581,9 +555,9 @@
       <div class="container">
         <p>
           MIT License &middot;
-          <a href="https://github.com/dzhng/crm.cli">GitHub</a>
+          <a href="https://github.com/bunkernine/crm.sdk">GitHub</a>
           &middot;
-          <a href="https://www.npmjs.com/package/@dzhng/crm.cli">npm</a>
+          <a href="https://www.npmjs.com/package/crm.sdk">npm</a>
           &middot; Created by <a href="https://duet.so">Duet</a>
         </p>
       </div>

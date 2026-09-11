@@ -32,9 +32,31 @@ npm install crm.sdk
 # or: bun add crm.sdk
 ```
 
-Point your agent at [`skills/SKILL.md`](./skills/SKILL.md) for the full method contract.
+The skill does **not** replace the package. Agents still `import { createCrm } from 'crm.sdk'`. Postgres must be reachable. On first `createCrm`, the SDK runs `CREATE SCHEMA IF NOT EXISTS crm` and creates the four entity tables plus `search_index`.
 
-Postgres must be reachable. On first `createCrm`, the SDK runs `CREATE SCHEMA IF NOT EXISTS crm` and creates the four entity tables plus `search_index`.
+### Install as an agent skill
+
+The contract lives in [`skills/SKILL.md`](./skills/SKILL.md) (`name: crm-sdk`). Copy it into a Cursor skills directory so the agent can load it:
+
+```bash
+# After npm install crm.sdk (project skill)
+mkdir -p .cursor/skills/crm-sdk
+cp node_modules/crm.sdk/skills/SKILL.md .cursor/skills/crm-sdk/SKILL.md
+
+# From this repo
+mkdir -p .cursor/skills/crm-sdk
+cp skills/SKILL.md .cursor/skills/crm-sdk/SKILL.md
+
+# Personal (all projects)
+mkdir -p ~/.cursor/skills/crm-sdk
+cp skills/SKILL.md ~/.cursor/skills/crm-sdk/SKILL.md
+```
+
+Claude Code:
+
+```bash
+claude skills add https://github.com/bunkernine/crm.sdk/tree/main/skills
+```
 
 ## Why this package
 
