@@ -29,12 +29,12 @@ import { describe, expect, test } from 'bun:test'
 
 import { createTestContext } from '../helpers'
 
-describe('scenario: angel investor relationship tracking', () => {
-  test('build a founder network, evaluate deals, track intros', () => {
+describe('scenario: angel investor relationship tracking', async () => {
+  test('build a founder network, evaluate deals, track intros', async () => {
     const ctx = createTestContext()
 
     // ── Build the network: founders ──
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -54,7 +54,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--set',
       'relationship=close',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -72,7 +72,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--set',
       'relationship=evaluating',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -90,7 +90,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--set',
       'relationship=new',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -112,7 +112,7 @@ describe('scenario: angel investor relationship tracking', () => {
     )
 
     // ── Build the network: VCs and operators ──
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -128,7 +128,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--set',
       'focus=seed',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -144,7 +144,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--set',
       'focus=series-a',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -160,7 +160,7 @@ describe('scenario: angel investor relationship tracking', () => {
     )
 
     // ── Companies for the founders ──
-    ctx.runOK(
+    await ctx.runOK(
       'company',
       'add',
       '--name',
@@ -174,7 +174,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--set',
       'sector=healthtech',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'company',
       'add',
       '--name',
@@ -188,7 +188,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--set',
       'sector=fintech',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'company',
       'add',
       '--name',
@@ -202,7 +202,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--set',
       'sector=ai-infra',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'company',
       'add',
       '--name',
@@ -218,8 +218,7 @@ describe('scenario: angel investor relationship tracking', () => {
     )
 
     // ── Create investment deals ──
-    const dealStack = ctx
-      .runOK(
+    const dealStack = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -236,11 +235,9 @@ describe('scenario: angel investor relationship tracking', () => {
         'thesis=payments-infra',
         '--tag',
         'seed',
-      )
-      .trim()
+      )).trim()
 
-    const dealAutoForge = ctx
-      .runOK(
+    const dealAutoForge = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -257,11 +254,10 @@ describe('scenario: angel investor relationship tracking', () => {
         'thesis=ai-tooling',
         '--tag',
         'pre-seed',
-      )
-      .trim()
+      )).trim()
 
     // ── Log relationship activities ──
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'meeting',
       'Quarterly check-in with Aisha — NexaHealth hitting $2M ARR',
@@ -270,7 +266,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--set',
       'type=portfolio-review',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'meeting',
       'First meeting with Ben — impressive demo of StackPay',
@@ -281,7 +277,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--set',
       'type=first-meeting',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'call',
       'Intro call with Chen Wei — AutoForge looks promising',
@@ -294,7 +290,7 @@ describe('scenario: angel investor relationship tracking', () => {
     )
 
     // ── Make an intro: connect Ben with Eric (VC) ──
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'email',
       'Intro: Ben Torres <> Eric Yamamoto — StackPay seed round',
@@ -307,7 +303,7 @@ describe('scenario: angel investor relationship tracking', () => {
     )
 
     // ── Due diligence on StackPay ──
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       dealStack,
@@ -316,7 +312,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--note',
       'Checked references, strong team',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'call',
       'Reference check with Grace (Stripe) — positive signal on StackPay API',
@@ -327,7 +323,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--set',
       'type=reference-check',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       dealStack,
@@ -336,7 +332,7 @@ describe('scenario: angel investor relationship tracking', () => {
       '--note',
       'Sent term sheet',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       dealStack,
@@ -347,8 +343,8 @@ describe('scenario: angel investor relationship tracking', () => {
     )
 
     // ── Pass on AutoForge ──
-    ctx.runOK('deal', 'move', dealAutoForge, '--stage', 'qualified')
-    ctx.runOK(
+    await ctx.runOK('deal', 'move', dealAutoForge, '--stage', 'qualified')
+    await ctx.runOK(
       'deal',
       'move',
       dealAutoForge,
@@ -360,7 +356,7 @@ describe('scenario: angel investor relationship tracking', () => {
 
     // ── Query the network ──
     // Find all founders
-    const founders = ctx.runJSON<Array<{ name: string }>>(
+    const founders = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--tag',
@@ -371,7 +367,7 @@ describe('scenario: angel investor relationship tracking', () => {
     expect(founders).toHaveLength(4)
 
     // Find tier-1 VCs
-    const vcsTier1 = ctx.runJSON<Array<{ name: string }>>(
+    const vcsTier1 = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--tag',
@@ -382,7 +378,7 @@ describe('scenario: angel investor relationship tracking', () => {
     expect(vcsTier1).toHaveLength(2)
 
     // Find contacts in healthtech
-    const healthtech = ctx.runJSON<Array<{ name: string }>>(
+    const healthtech = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--filter',
@@ -394,7 +390,7 @@ describe('scenario: angel investor relationship tracking', () => {
     expect(healthtech[0].name).toBe('Aisha Rahman')
 
     // ── Search the network by keyword ──
-    const stripeResults = ctx.runJSON<Array<{ type: string; name?: string }>>(
+    const stripeResults = await ctx.runJSON<Array<{ type: string; name?: string }>>(
       'search',
       'stripe',
       '--format',
@@ -403,7 +399,7 @@ describe('scenario: angel investor relationship tracking', () => {
     expect(stripeResults.length).toBeGreaterThanOrEqual(1)
 
     // Search by LinkedIn handle
-    const linkedinLookup = ctx.runOK(
+    const linkedinLookup = await ctx.runOK(
       'contact',
       'show',
       'aisharahman',
@@ -415,7 +411,7 @@ describe('scenario: angel investor relationship tracking', () => {
     expect(aisha.linkedin).toBe('aisharahman')
 
     // ── Verify deal outcomes ──
-    const wonDeals = ctx.runJSON<Array<{ title: string }>>(
+    const wonDeals = await ctx.runJSON<Array<{ title: string }>>(
       'report',
       'won',
       '--format',
@@ -424,7 +420,7 @@ describe('scenario: angel investor relationship tracking', () => {
     expect(wonDeals).toHaveLength(1)
     expect(wonDeals[0].title).toBe('StackPay Seed Round')
 
-    const lostDeals = ctx.runJSON<Array<{ title: string }>>(
+    const lostDeals = await ctx.runJSON<Array<{ title: string }>>(
       'report',
       'lost',
       '--format',
@@ -434,7 +430,7 @@ describe('scenario: angel investor relationship tracking', () => {
     expect(lostDeals[0].title).toBe('AutoForge Pre-seed')
 
     // ── Portfolio companies ──
-    const portfolio = ctx.runJSON<Array<{ name: string }>>(
+    const portfolio = await ctx.runJSON<Array<{ name: string }>>(
       'company',
       'list',
       '--tag',
@@ -445,7 +441,7 @@ describe('scenario: angel investor relationship tracking', () => {
     expect(portfolio).toHaveLength(2) // NexaHealth + ClimateIQ
 
     // ── Activity log for a specific contact ──
-    const aishaActivities = ctx.runJSON<Array<{ type: string }>>(
+    const aishaActivities = await ctx.runJSON<Array<{ type: string }>>(
       'activity',
       'list',
       '--contact',
@@ -456,7 +452,7 @@ describe('scenario: angel investor relationship tracking', () => {
     expect(aishaActivities).toHaveLength(1) // quarterly check-in
 
     // ── Multi-contact activity (the intro) ──
-    const benActivities = ctx.runJSON<Array<{ type: string; body: string }>>(
+    const benActivities = await ctx.runJSON<Array<{ type: string; body: string }>>(
       'activity',
       'list',
       '--contact',

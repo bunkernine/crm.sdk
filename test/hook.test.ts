@@ -1,44 +1,41 @@
 import { describe, expect, test } from 'bun:test'
-import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 
+import type { HookName } from '../src/types.ts'
 import { createTestContext } from './helpers.ts'
 
-function hookSetup(hookName: string) {
-  const ctx = createTestContext()
-  const hookOutput = join(ctx.dir, 'hook-output.json')
-  const hookScript = join(ctx.dir, 'hook.sh')
-  writeFileSync(hookScript, `#!/bin/sh\ncat > ${hookOutput}\n`, {
-    mode: 0o755,
+function abortHooks(hookName: HookName) {
+  return createTestContext({
+    hooks: {
+      [hookName]: () => false,
+    },
   })
-  const configPath = join(ctx.dir, 'config.toml')
-  writeFileSync(configPath, `[hooks]\n${hookName} = "${hookScript}"\n`)
-  return { ctx, hookOutput, configPath }
 }
 
-function abortHookSetup(hookName: string) {
-  const ctx = createTestContext()
-  const hookScript = join(ctx.dir, 'abort.sh')
-  writeFileSync(hookScript, '#!/bin/sh\nexit 1\n', { mode: 0o755 })
-  const configPath = join(ctx.dir, 'config.toml')
-  writeFileSync(configPath, `[hooks]\n${hookName} = "${hookScript}"\n`)
-  return { ctx, configPath }
+function captureHooks(hookName: HookName) {
+  let last = ''
+  const ctx = createTestContext({
+    hooks: {
+      [hookName]: (data: Record<string, unknown>) => {
+        last = JSON.stringify(data)
+        return true
+      },
+    },
+  })
+  return {
+    ctx,
+    payload: () => last,
+  }
 }
 
-describe('hooks', () => {
-  // -------------------------------------------------------------------------
-  // contact-add
-  // -------------------------------------------------------------------------
-  test('pre-contact-add hook can abort creation', () => {
-    const { ctx, configPath } = abortHookSetup('pre-contact-add')
-    ctx.runFail('--config', configPath, 'contact', 'add', '--name', 'Jane')
+describe('hooks', async () => {
+  test('pre-contact-add hook can abort creation', async () => {
+    const ctx = abortHooks('pre-contact-add')
+    await ctx.runFail('contact', 'add', '--name', 'Jane')
   })
 
-  test('post-contact-add hook receives entity JSON', () => {
-    const { ctx, hookOutput, configPath } = hookSetup('post-contact-add')
-    ctx.runOK(
-      '--config',
-      configPath,
+  test('post-contact-add hook receives entity JSON', async () => {
+    const { ctx, payload } = captureHooks('post-contact-add')
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -46,89 +43,49 @@ describe('hooks', () => {
       '--email',
       'jane@acme.com',
     )
-    const data = readFileSync(hookOutput, 'utf-8')
-    expect(data).toContain('Jane')
-    expect(data).toContain('jane@acme.com')
+    expect(payload()).toContain('Jane')
+    expect(payload()).toContain('jane@acme.com')
   })
 
-  // -------------------------------------------------------------------------
-  // contact-edit
-  // -------------------------------------------------------------------------
-  test('pre-contact-edit hook can abort edit', () => {
-    const { ctx, configPath } = abortHookSetup('pre-contact-edit')
-    const id = ctx
-      .runOK('--config', configPath, 'contact', 'add', '--name', 'Jane')
-      .trim()
-    ctx.runFail(
-      '--config',
-      configPath,
-      'contact',
-      'edit',
-      id,
-      '--name',
-      'Janet',
-    )
-    // Name should be unchanged
-    const out = ctx.runOK(
-      '--config',
-      configPath,
-      '--format',
-      'json',
-      'contact',
-      'show',
-      id,
-    )
+  test('pre-contact-edit hook can abort edit', async () => {
+    const ctx = abortHooks('pre-contact-edit')
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane')).trim()
+    await ctx.runFail('contact', 'edit', id, '--name', 'Janet')
+    const out = await ctx.runOK('--format', 'json', 'contact', 'show', id)
     expect(out).toContain('Jane')
     expect(out).not.toContain('Janet')
   })
 
-  test('post-contact-edit hook receives updated entity', () => {
-    const { ctx, hookOutput, configPath } = hookSetup('post-contact-edit')
-    const id = ctx
-      .runOK('--config', configPath, 'contact', 'add', '--name', 'Jane')
-      .trim()
-    ctx.runOK('--config', configPath, 'contact', 'edit', id, '--name', 'Janet')
-    const data = readFileSync(hookOutput, 'utf-8')
-    expect(data).toContain('Janet')
+  test('post-contact-edit hook receives updated entity', async () => {
+    const { ctx, payload } = captureHooks('post-contact-edit')
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane')).trim()
+    await ctx.runOK('contact', 'edit', id, '--name', 'Janet')
+    expect(payload()).toContain('Janet')
   })
 
-  // -------------------------------------------------------------------------
-  // contact-rm
-  // -------------------------------------------------------------------------
-  test('pre-contact-rm hook can abort deletion', () => {
-    const { ctx, configPath } = abortHookSetup('pre-contact-rm')
-    const id = ctx
-      .runOK('--config', configPath, 'contact', 'add', '--name', 'Jane')
-      .trim()
-    ctx.runFail('--config', configPath, 'contact', 'rm', id, '--force')
-    // Contact should still exist
-    ctx.runOK('--config', configPath, 'contact', 'show', id)
+  test('pre-contact-rm hook can abort deletion', async () => {
+    const ctx = abortHooks('pre-contact-rm')
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane')).trim()
+    await ctx.runFail('contact', 'rm', id, '--force')
+    await ctx.runOK('contact', 'show', id)
   })
 
-  test('post-contact-rm hook receives deleted entity', () => {
-    const { ctx, hookOutput, configPath } = hookSetup('post-contact-rm')
-    const id = ctx
-      .runOK('--config', configPath, 'contact', 'add', '--name', 'Jane')
-      .trim()
-    ctx.runOK('--config', configPath, 'contact', 'rm', id, '--force')
-    const data = readFileSync(hookOutput, 'utf-8')
-    expect(data).toContain(id)
-    expect(data).toContain('Jane')
+  test('post-contact-rm hook receives deleted entity', async () => {
+    const { ctx, payload } = captureHooks('post-contact-rm')
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane')).trim()
+    await ctx.runOK('contact', 'rm', id, '--force')
+    expect(payload()).toContain(id)
+    expect(payload()).toContain('Jane')
   })
 
-  // -------------------------------------------------------------------------
-  // company-add
-  // -------------------------------------------------------------------------
-  test('pre-company-add hook can abort creation', () => {
-    const { ctx, configPath } = abortHookSetup('pre-company-add')
-    ctx.runFail('--config', configPath, 'company', 'add', '--name', 'Acme Corp')
+  test('pre-company-add hook can abort creation', async () => {
+    const ctx = abortHooks('pre-company-add')
+    await ctx.runFail('company', 'add', '--name', 'Acme Corp')
   })
 
-  test('post-company-add hook receives entity JSON', () => {
-    const { ctx, hookOutput, configPath } = hookSetup('post-company-add')
-    ctx.runOK(
-      '--config',
-      configPath,
+  test('post-company-add hook receives entity JSON', async () => {
+    const { ctx, payload } = captureHooks('post-company-add')
+    await ctx.runOK(
       'company',
       'add',
       '--name',
@@ -136,187 +93,88 @@ describe('hooks', () => {
       '--website',
       'acme.com',
     )
-    const data = readFileSync(hookOutput, 'utf-8')
-    expect(data).toContain('Acme Corp')
-    expect(data).toContain('acme.com')
+    expect(payload()).toContain('Acme Corp')
+    expect(payload()).toContain('acme.com')
   })
 
-  // -------------------------------------------------------------------------
-  // company-edit
-  // -------------------------------------------------------------------------
-  test('pre-company-edit hook can abort edit', () => {
-    const { ctx, configPath } = abortHookSetup('pre-company-edit')
-    const id = ctx
-      .runOK('--config', configPath, 'company', 'add', '--name', 'Acme Corp')
-      .trim()
-    ctx.runFail(
-      '--config',
-      configPath,
-      'company',
-      'edit',
-      id,
-      '--name',
-      'Acme Inc',
-    )
-    const out = ctx.runOK(
-      '--config',
-      configPath,
-      '--format',
-      'json',
-      'company',
-      'show',
-      id,
-    )
+  test('pre-company-edit hook can abort edit', async () => {
+    const ctx = abortHooks('pre-company-edit')
+    const id = (await ctx.runOK('company', 'add', '--name', 'Acme Corp')).trim()
+    await ctx.runFail('company', 'edit', id, '--name', 'Acme Inc')
+    const out = await ctx.runOK('--format', 'json', 'company', 'show', id)
     expect(out).toContain('Acme Corp')
     expect(out).not.toContain('Acme Inc')
   })
 
-  test('post-company-edit hook receives updated entity', () => {
-    const { ctx, hookOutput, configPath } = hookSetup('post-company-edit')
-    const id = ctx
-      .runOK('--config', configPath, 'company', 'add', '--name', 'Acme Corp')
-      .trim()
-    ctx.runOK(
-      '--config',
-      configPath,
-      'company',
-      'edit',
-      id,
-      '--name',
-      'Acme Inc',
-    )
-    const data = readFileSync(hookOutput, 'utf-8')
-    expect(data).toContain('Acme Inc')
+  test('post-company-edit hook receives updated entity', async () => {
+    const { ctx, payload } = captureHooks('post-company-edit')
+    const id = (await ctx.runOK('company', 'add', '--name', 'Acme Corp')).trim()
+    await ctx.runOK('company', 'edit', id, '--name', 'Acme Inc')
+    expect(payload()).toContain('Acme Inc')
   })
 
-  // -------------------------------------------------------------------------
-  // company-rm
-  // -------------------------------------------------------------------------
-  test('pre-company-rm hook can abort deletion', () => {
-    const { ctx, configPath } = abortHookSetup('pre-company-rm')
-    const id = ctx
-      .runOK('--config', configPath, 'company', 'add', '--name', 'Acme Corp')
-      .trim()
-    ctx.runFail('--config', configPath, 'company', 'rm', id, '--force')
-    ctx.runOK('--config', configPath, 'company', 'show', id)
+  test('pre-company-rm hook can abort deletion', async () => {
+    const ctx = abortHooks('pre-company-rm')
+    const id = (await ctx.runOK('company', 'add', '--name', 'Acme Corp')).trim()
+    await ctx.runFail('company', 'rm', id, '--force')
+    await ctx.runOK('company', 'show', id)
   })
 
-  test('post-company-rm hook receives deleted entity', () => {
-    const { ctx, hookOutput, configPath } = hookSetup('post-company-rm')
-    const id = ctx
-      .runOK('--config', configPath, 'company', 'add', '--name', 'Acme Corp')
-      .trim()
-    ctx.runOK('--config', configPath, 'company', 'rm', id, '--force')
-    const data = readFileSync(hookOutput, 'utf-8')
-    expect(data).toContain(id)
-    expect(data).toContain('Acme Corp')
+  test('post-company-rm hook receives deleted entity', async () => {
+    const { ctx, payload } = captureHooks('post-company-rm')
+    const id = (await ctx.runOK('company', 'add', '--name', 'Acme Corp')).trim()
+    await ctx.runOK('company', 'rm', id, '--force')
+    expect(payload()).toContain(id)
+    expect(payload()).toContain('Acme Corp')
   })
 
-  // -------------------------------------------------------------------------
-  // deal-add
-  // -------------------------------------------------------------------------
-  test('pre-deal-add hook can abort creation', () => {
-    const { ctx, configPath } = abortHookSetup('pre-deal-add')
-    ctx.runFail('--config', configPath, 'deal', 'add', '--title', 'Big Deal')
+  test('pre-deal-add hook can abort creation', async () => {
+    const ctx = abortHooks('pre-deal-add')
+    await ctx.runFail('deal', 'add', '--title', 'Big Deal')
   })
 
-  test('post-deal-add hook receives entity JSON', () => {
-    const { ctx, hookOutput, configPath } = hookSetup('post-deal-add')
-    ctx.runOK(
-      '--config',
-      configPath,
-      'deal',
-      'add',
-      '--title',
-      'Big Deal',
-      '--value',
-      '50000',
-    )
-    const data = readFileSync(hookOutput, 'utf-8')
-    expect(data).toContain('Big Deal')
-    expect(data).toContain('50000')
+  test('post-deal-add hook receives entity JSON', async () => {
+    const { ctx, payload } = captureHooks('post-deal-add')
+    await ctx.runOK('deal', 'add', '--title', 'Big Deal', '--value', '50000')
+    expect(payload()).toContain('Big Deal')
+    expect(payload()).toContain('50000')
   })
 
-  // -------------------------------------------------------------------------
-  // deal-edit
-  // -------------------------------------------------------------------------
-  test('pre-deal-edit hook can abort edit', () => {
-    const { ctx, configPath } = abortHookSetup('pre-deal-edit')
-    const id = ctx
-      .runOK('--config', configPath, 'deal', 'add', '--title', 'Big Deal')
-      .trim()
-    ctx.runFail(
-      '--config',
-      configPath,
-      'deal',
-      'edit',
-      id,
-      '--title',
-      'Huge Deal',
-    )
-    const out = ctx.runOK(
-      '--config',
-      configPath,
-      '--format',
-      'json',
-      'deal',
-      'show',
-      id,
-    )
+  test('pre-deal-edit hook can abort edit', async () => {
+    const ctx = abortHooks('pre-deal-edit')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Big Deal')).trim()
+    await ctx.runFail('deal', 'edit', id, '--title', 'Huge Deal')
+    const out = await ctx.runOK('--format', 'json', 'deal', 'show', id)
     expect(out).toContain('Big Deal')
     expect(out).not.toContain('Huge Deal')
   })
 
-  test('post-deal-edit hook receives updated entity', () => {
-    const { ctx, hookOutput, configPath } = hookSetup('post-deal-edit')
-    const id = ctx
-      .runOK('--config', configPath, 'deal', 'add', '--title', 'Big Deal')
-      .trim()
-    ctx.runOK(
-      '--config',
-      configPath,
-      'deal',
-      'edit',
-      id,
-      '--title',
-      'Huge Deal',
-    )
-    const data = readFileSync(hookOutput, 'utf-8')
-    expect(data).toContain('Huge Deal')
+  test('post-deal-edit hook receives updated entity', async () => {
+    const { ctx, payload } = captureHooks('post-deal-edit')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Big Deal')).trim()
+    await ctx.runOK('deal', 'edit', id, '--title', 'Huge Deal')
+    expect(payload()).toContain('Huge Deal')
   })
 
-  // -------------------------------------------------------------------------
-  // deal-rm
-  // -------------------------------------------------------------------------
-  test('pre-deal-rm hook can abort deletion', () => {
-    const { ctx, configPath } = abortHookSetup('pre-deal-rm')
-    const id = ctx
-      .runOK('--config', configPath, 'deal', 'add', '--title', 'Big Deal')
-      .trim()
-    ctx.runFail('--config', configPath, 'deal', 'rm', id, '--force')
-    ctx.runOK('--config', configPath, 'deal', 'show', id)
+  test('pre-deal-rm hook can abort deletion', async () => {
+    const ctx = abortHooks('pre-deal-rm')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Big Deal')).trim()
+    await ctx.runFail('deal', 'rm', id, '--force')
+    await ctx.runOK('deal', 'show', id)
   })
 
-  test('post-deal-rm hook receives deleted entity', () => {
-    const { ctx, hookOutput, configPath } = hookSetup('post-deal-rm')
-    const id = ctx
-      .runOK('--config', configPath, 'deal', 'add', '--title', 'Big Deal')
-      .trim()
-    ctx.runOK('--config', configPath, 'deal', 'rm', id, '--force')
-    const data = readFileSync(hookOutput, 'utf-8')
-    expect(data).toContain(id)
-    expect(data).toContain('Big Deal')
+  test('post-deal-rm hook receives deleted entity', async () => {
+    const { ctx, payload } = captureHooks('post-deal-rm')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Big Deal')).trim()
+    await ctx.runOK('deal', 'rm', id, '--force')
+    expect(payload()).toContain(id)
+    expect(payload()).toContain('Big Deal')
   })
 
-  // -------------------------------------------------------------------------
-  // deal-stage-change
-  // -------------------------------------------------------------------------
-  test('pre-deal-stage-change hook can abort stage move', () => {
-    const { ctx, configPath } = abortHookSetup('pre-deal-stage-change')
-    const id = ctx
-      .runOK(
-        '--config',
-        configPath,
+  test('pre-deal-stage-change hook can abort stage move', async () => {
+    const ctx = abortHooks('pre-deal-stage-change')
+    const id = (
+      await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -324,34 +182,16 @@ describe('hooks', () => {
         '--stage',
         'lead',
       )
-      .trim()
-    ctx.runFail(
-      '--config',
-      configPath,
-      'deal',
-      'move',
-      id,
-      '--stage',
-      'qualified',
-    )
-    const out = ctx.runOK(
-      '--config',
-      configPath,
-      '--format',
-      'json',
-      'deal',
-      'show',
-      id,
-    )
+    ).trim()
+    await ctx.runFail('deal', 'move', id, '--stage', 'qualified')
+    const out = await ctx.runOK('--format', 'json', 'deal', 'show', id)
     expect(out).toContain('"lead"')
   })
 
-  test('post-deal-stage-change hook fires on move', () => {
-    const { ctx, hookOutput, configPath } = hookSetup('post-deal-stage-change')
-    const id = ctx
-      .runOK(
-        '--config',
-        configPath,
+  test('post-deal-stage-change hook fires on move', async () => {
+    const { ctx, payload } = captureHooks('post-deal-stage-change')
+    const id = (
+      await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -359,63 +199,27 @@ describe('hooks', () => {
         '--stage',
         'lead',
       )
-      .trim()
-    ctx.runOK(
-      '--config',
-      configPath,
-      'deal',
-      'move',
-      id,
-      '--stage',
-      'qualified',
-    )
-    const data = readFileSync(hookOutput, 'utf-8')
-    expect(data).toContain('qualified')
+    ).trim()
+    await ctx.runOK('deal', 'move', id, '--stage', 'qualified')
+    expect(payload()).toContain('qualified')
   })
 
-  // -------------------------------------------------------------------------
-  // activity-add
-  // -------------------------------------------------------------------------
-  test('pre-activity-add hook can abort logging', () => {
-    const { ctx, configPath } = abortHookSetup('pre-activity-add')
-    const id = ctx
-      .runOK('--config', configPath, 'contact', 'add', '--name', 'Jane')
-      .trim()
-    ctx.runFail(
-      '--config',
-      configPath,
-      'log',
-      'note',
-      'Some note',
-      '--contact',
-      id,
-    )
+  test('pre-activity-add hook can abort logging', async () => {
+    const ctx = abortHooks('pre-activity-add')
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane')).trim()
+    await ctx.runFail('log', 'note', 'Some note', '--contact', id)
   })
 
-  test('post-activity-add hook receives activity data', () => {
-    const { ctx, hookOutput, configPath } = hookSetup('post-activity-add')
-    const id = ctx
-      .runOK('--config', configPath, 'contact', 'add', '--name', 'Jane')
-      .trim()
-    ctx.runOK(
-      '--config',
-      configPath,
-      'log',
-      'note',
-      'Great call today',
-      '--contact',
-      id,
-    )
-    const data = readFileSync(hookOutput, 'utf-8')
-    expect(data).toContain('note')
-    expect(data).toContain('Great call today')
+  test('post-activity-add hook receives activity data', async () => {
+    const { ctx, payload } = captureHooks('post-activity-add')
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane')).trim()
+    await ctx.runOK('log', 'note', 'Great call today', '--contact', id)
+    expect(payload()).toContain('note')
+    expect(payload()).toContain('Great call today')
   })
 
-  // -------------------------------------------------------------------------
-  // no hooks configured
-  // -------------------------------------------------------------------------
-  test('no hooks configured still works', () => {
+  test('no hooks configured still works', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane')
+    await ctx.runOK('contact', 'add', '--name', 'Jane')
   })
 })

@@ -2,11 +2,11 @@ import { describe, expect, test } from 'bun:test'
 
 import { createTestContext } from './helpers.ts'
 
-describe('log', () => {
-  test('log note to contact', () => {
+describe('log', async () => {
+  test('log note to contact', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK(
       'log',
       'note',
       'Had a great intro call',
@@ -14,7 +14,7 @@ describe('log', () => {
       'jane@acme.com',
     )
 
-    const activities = ctx.runJSON<Array<{ type: string }>>(
+    const activities = await ctx.runJSON<Array<{ type: string }>>(
       'activity',
       'list',
       '--contact',
@@ -26,10 +26,10 @@ describe('log', () => {
     expect(activities[0].type).toBe('note')
   })
 
-  test('log call with duration as custom field', () => {
+  test('log call with duration as custom field', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK(
       'log',
       'call',
       'Demo scheduled',
@@ -39,7 +39,7 @@ describe('log', () => {
       'duration=15m',
     )
 
-    const activities = ctx.runJSON<Array<{ type: string }>>(
+    const activities = await ctx.runJSON<Array<{ type: string }>>(
       'activity',
       'list',
       '--contact',
@@ -51,10 +51,10 @@ describe('log', () => {
     expect(activities[0].type).toBe('call')
   })
 
-  test('log meeting', () => {
+  test('log meeting', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK(
       'log',
       'meeting',
       'Went through pricing',
@@ -62,7 +62,7 @@ describe('log', () => {
       'jane@acme.com',
     )
 
-    const activities = ctx.runJSON<Array<{ type: string }>>(
+    const activities = await ctx.runJSON<Array<{ type: string }>>(
       'activity',
       'list',
       '--contact',
@@ -73,12 +73,12 @@ describe('log', () => {
     expect(activities[0].type).toBe('meeting')
   })
 
-  test('log email', () => {
+  test('log email', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('log', 'email', 'Sent proposal PDF', '--contact', 'jane@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('log', 'email', 'Sent proposal PDF', '--contact', 'jane@acme.com')
 
-    const activities = ctx.runJSON<Array<{ type: string }>>(
+    const activities = await ctx.runJSON<Array<{ type: string }>>(
       'activity',
       'list',
       '--contact',
@@ -89,17 +89,17 @@ describe('log', () => {
     expect(activities[0].type).toBe('email')
   })
 
-  test('rejects invalid type', () => {
+  test('rejects invalid type', async () => {
     const ctx = createTestContext()
-    ctx.runFail('log', 'tweet', 'Hello')
+    await ctx.runFail('log', 'tweet', 'Hello')
   })
 
-  test('--contact auto-creates contact if not found', () => {
+  test('--contact auto-creates contact if not found', async () => {
     const ctx = createTestContext()
-    ctx.runOK('log', 'note', 'First touch', '--contact', 'nobody@example.com')
+    await ctx.runOK('log', 'note', 'First touch', '--contact', 'nobody@example.com')
 
     // Contact should have been auto-created
-    const contacts = ctx.runJSON<Array<{ name: string; emails: string[] }>>(
+    const contacts = await ctx.runJSON<Array<{ name: string; emails: string[] }>>(
       'contact',
       'list',
       '--format',
@@ -110,25 +110,23 @@ describe('log', () => {
     expect(contacts[0].emails).toContain('nobody@example.com')
   })
 
-  test('--contact auto-creates contact from phone number', () => {
+  test('--contact auto-creates contact from phone number', async () => {
     const ctx = createTestContext()
-    ctx.runOK('log', 'note', 'Cold call', '--contact', '+1-212-555-1234')
+    await ctx.runOK('log', 'note', 'Cold call', '--contact', '+1-212-555-1234')
 
-    const contacts = ctx.runJSON<
+    const contacts = await ctx.runJSON<
       Array<{ name: string; emails: string[]; phones: string[] }>
     >('contact', 'list', '--format', 'json')
     expect(contacts).toHaveLength(1)
     expect(contacts[0].phones).toHaveLength(1)
   })
 
-  test('log with deal link', () => {
+  test('log with deal link', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    const dealID = ctx
-      .runOK('deal', 'add', '--title', 'Big Deal', '--contact', 'jane@acme.com')
-      .trim()
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    const dealID = (await ctx.runOK('deal', 'add', '--title', 'Big Deal', '--contact', 'jane@acme.com')).trim()
 
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'note',
       'Discussed pricing',
@@ -138,7 +136,7 @@ describe('log', () => {
       dealID,
     )
 
-    const activities = ctx.runJSON<unknown[]>(
+    const activities = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--deal',
@@ -149,10 +147,10 @@ describe('log', () => {
     expect(activities).toHaveLength(1)
   })
 
-  test('log with custom timestamp', () => {
+  test('log with custom timestamp', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK(
       'log',
       'note',
       'Backdated note',
@@ -162,7 +160,7 @@ describe('log', () => {
       '2026-01-15',
     )
 
-    const activities = ctx.runJSON<Array<{ created_at: string }>>(
+    const activities = await ctx.runJSON<Array<{ created_at: string }>>(
       'activity',
       'list',
       '--contact',
@@ -173,12 +171,12 @@ describe('log', () => {
     expect(activities[0].created_at).toContain('2026-01-15')
   })
 
-  test('log on company', () => {
+  test('log on company', async () => {
     const ctx = createTestContext()
-    ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
-    ctx.runOK('log', 'note', 'Company-level note', '--company', 'Acme')
+    await ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
+    await ctx.runOK('log', 'note', 'Company-level note', '--company', 'Acme')
 
-    const activities = ctx.runJSON<unknown[]>(
+    const activities = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--company',
@@ -189,12 +187,12 @@ describe('log', () => {
     expect(activities).toHaveLength(1)
   })
 
-  test('log on deal directly', () => {
+  test('log on deal directly', async () => {
     const ctx = createTestContext()
-    const dealID = ctx.runOK('deal', 'add', '--title', 'Big Deal').trim()
-    ctx.runOK('log', 'note', 'Deal-level note', '--deal', dealID)
+    const dealID = (await ctx.runOK('deal', 'add', '--title', 'Big Deal')).trim()
+    await ctx.runOK('log', 'note', 'Deal-level note', '--deal', dealID)
 
-    const activities = ctx.runJSON<unknown[]>(
+    const activities = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--deal',
@@ -205,11 +203,11 @@ describe('log', () => {
     expect(activities).toHaveLength(1)
   })
 
-  test('log with no entity links creates standalone activity', () => {
+  test('log with no entity links creates standalone activity', async () => {
     const ctx = createTestContext()
-    ctx.runOK('log', 'note', 'General note with no links')
+    await ctx.runOK('log', 'note', 'General note with no links')
 
-    const activities = ctx.runJSON<Array<{ body: string }>>(
+    const activities = await ctx.runJSON<Array<{ body: string }>>(
       'activity',
       'list',
       '--format',
@@ -219,12 +217,12 @@ describe('log', () => {
     expect(activities[0].body).toBe('General note with no links')
   })
 
-  test('--company auto-creates company if it does not exist', () => {
+  test('--company auto-creates company if it does not exist', async () => {
     const ctx = createTestContext()
-    ctx.runOK('log', 'note', 'First touch', '--company', 'NewCo')
+    await ctx.runOK('log', 'note', 'First touch', '--company', 'NewCo')
 
     // Company should have been auto-created
-    const companies = ctx.runJSON<Array<{ name: string }>>(
+    const companies = await ctx.runJSON<Array<{ name: string }>>(
       'company',
       'list',
       '--format',
@@ -233,7 +231,7 @@ describe('log', () => {
     expect(companies).toHaveLength(1)
     expect(companies[0].name).toBe('NewCo')
 
-    const activities = ctx.runJSON<unknown[]>(
+    const activities = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--company',
@@ -244,21 +242,21 @@ describe('log', () => {
     expect(activities).toHaveLength(1)
   })
 
-  test('--deal fails for nonexistent deal', () => {
+  test('--deal fails for nonexistent deal', async () => {
     const ctx = createTestContext()
-    ctx.runFail('log', 'note', 'Bad deal ref', '--deal', 'dl_nonexistent')
+    await ctx.runFail('log', 'note', 'Bad deal ref', '--deal', 'dl_nonexistent')
   })
 })
 
-describe('activity list', () => {
-  test('filter by type', () => {
+describe('activity list', async () => {
+  test('filter by type', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('log', 'note', 'A note', '--contact', 'jane@acme.com')
-    ctx.runOK('log', 'call', 'A call', '--contact', 'jane@acme.com')
-    ctx.runOK('log', 'note', 'Another note', '--contact', 'jane@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('log', 'note', 'A note', '--contact', 'jane@acme.com')
+    await ctx.runOK('log', 'call', 'A call', '--contact', 'jane@acme.com')
+    await ctx.runOK('log', 'note', 'Another note', '--contact', 'jane@acme.com')
 
-    const activities = ctx.runJSON<unknown[]>(
+    const activities = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--type',
@@ -269,10 +267,10 @@ describe('activity list', () => {
     expect(activities).toHaveLength(2)
   })
 
-  test('filter by since', () => {
+  test('filter by since', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK(
       'log',
       'note',
       'Old note',
@@ -281,7 +279,7 @@ describe('activity list', () => {
       '--at',
       '2025-01-01',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'note',
       'New note',
@@ -291,7 +289,7 @@ describe('activity list', () => {
       '2026-03-01',
     )
 
-    const activities = ctx.runJSON<unknown[]>(
+    const activities = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--since',
@@ -302,14 +300,14 @@ describe('activity list', () => {
     expect(activities).toHaveLength(1)
   })
 
-  test('limit', () => {
+  test('limit', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('log', 'note', 'Note 1', '--contact', 'jane@acme.com')
-    ctx.runOK('log', 'note', 'Note 2', '--contact', 'jane@acme.com')
-    ctx.runOK('log', 'note', 'Note 3', '--contact', 'jane@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('log', 'note', 'Note 1', '--contact', 'jane@acme.com')
+    await ctx.runOK('log', 'note', 'Note 2', '--contact', 'jane@acme.com')
+    await ctx.runOK('log', 'note', 'Note 3', '--contact', 'jane@acme.com')
 
-    const activities = ctx.runJSON<unknown[]>(
+    const activities = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--contact',
@@ -323,12 +321,12 @@ describe('activity list', () => {
   })
 })
 
-describe('multi-contact activity', () => {
-  test('log with multiple --contact flags', () => {
+describe('multi-contact activity', async () => {
+  test('log with multiple --contact flags', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')
+    await ctx.runOK(
       'log',
       'meeting',
       'Joint call',
@@ -338,7 +336,7 @@ describe('multi-contact activity', () => {
       'bob@acme.com',
     )
 
-    const janeActs = ctx.runJSON<unknown[]>(
+    const janeActs = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--contact',
@@ -348,7 +346,7 @@ describe('multi-contact activity', () => {
     )
     expect(janeActs).toHaveLength(1)
 
-    const bobActs = ctx.runJSON<unknown[]>(
+    const bobActs = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--contact',
@@ -359,15 +357,11 @@ describe('multi-contact activity', () => {
     expect(bobActs).toHaveLength(1)
   })
 
-  test('contacts array in json output', () => {
+  test('contacts array in json output', async () => {
     const ctx = createTestContext()
-    const id1 = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-      .trim()
-    const id2 = ctx
-      .runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')
-      .trim()
-    ctx.runOK(
+    const id1 = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')).trim()
+    const id2 = (await ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')).trim()
+    await ctx.runOK(
       'log',
       'call',
       'Group call',
@@ -377,7 +371,7 @@ describe('multi-contact activity', () => {
       'bob@acme.com',
     )
 
-    const activities = ctx.runJSON<Array<{ contacts: string[] }>>(
+    const activities = await ctx.runJSON<Array<{ contacts: string[] }>>(
       'activity',
       'list',
       '--format',
@@ -388,12 +382,12 @@ describe('multi-contact activity', () => {
     expect(activities[0].contacts).toContain(id2)
   })
 
-  test('activity on company has empty contacts array', () => {
+  test('activity on company has empty contacts array', async () => {
     const ctx = createTestContext()
-    ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
-    ctx.runOK('log', 'note', 'Company note', '--company', 'Acme')
+    await ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
+    await ctx.runOK('log', 'note', 'Company note', '--company', 'Acme')
 
-    const activities = ctx.runJSON<Array<{ contacts: string[] }>>(
+    const activities = await ctx.runJSON<Array<{ contacts: string[] }>>(
       'activity',
       'list',
       '--format',
@@ -402,11 +396,11 @@ describe('multi-contact activity', () => {
     expect(activities[0].contacts).toEqual([])
   })
 
-  test('--contact and --company together', () => {
+  test('--contact and --company together', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
+    await ctx.runOK(
       'log',
       'note',
       'Met with Jane at Acme',
@@ -416,7 +410,7 @@ describe('multi-contact activity', () => {
       'Acme',
     )
 
-    const janeActs = ctx.runJSON<unknown[]>(
+    const janeActs = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--contact',
@@ -426,7 +420,7 @@ describe('multi-contact activity', () => {
     )
     expect(janeActs).toHaveLength(1)
 
-    const coActs = ctx.runJSON<unknown[]>(
+    const coActs = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--company',
@@ -438,11 +432,11 @@ describe('multi-contact activity', () => {
   })
 })
 
-describe('activity --at validation', () => {
-  test('rejects invalid --at date', () => {
+describe('activity --at validation', async () => {
+  test('rejects invalid --at date', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    const result = ctx.runFail(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    const result = await ctx.runFail(
       'log',
       'note',
       'Test note',
@@ -454,10 +448,10 @@ describe('activity --at validation', () => {
     expect(result.stderr).toContain('invalid')
   })
 
-  test('accepts valid --at date', () => {
+  test('accepts valid --at date', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK(
       'log',
       'note',
       'Backdated note',
@@ -466,7 +460,7 @@ describe('activity --at validation', () => {
       '--at',
       '2026-01-15',
     )
-    const activities = ctx.runJSON<Array<{ created_at: string }>>(
+    const activities = await ctx.runJSON<Array<{ created_at: string }>>(
       'activity',
       'list',
       '--format',

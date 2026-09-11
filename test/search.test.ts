@@ -2,10 +2,10 @@ import { describe, expect, test } from 'bun:test'
 
 import { createTestContext } from './helpers.ts'
 
-describe('search (keyword FTS5)', () => {
-  test('search by name', () => {
+describe('search (keyword FTS5)', async () => {
+  test('search by name', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -13,7 +13,7 @@ describe('search (keyword FTS5)', () => {
       '--email',
       'jane@acme.com',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -22,14 +22,14 @@ describe('search (keyword FTS5)', () => {
       'john@globex.com',
     )
 
-    const out = ctx.runOK('search', 'Jane')
+    const out = await ctx.runOK('search', 'Jane')
     expect(out).toContain('Jane Doe')
     expect(out).not.toContain('John Smith')
   })
 
-  test('search by email host', () => {
+  test('search by email host', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -38,36 +38,36 @@ describe('search (keyword FTS5)', () => {
       'jane@acme.com',
     )
 
-    const out = ctx.runOK('search', 'acme.com')
+    const out = await ctx.runOK('search', 'acme.com')
     expect(out).toContain('Jane Doe')
   })
 
-  test('search across entity types', () => {
+  test('search across entity types', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--company', 'Acme')
-    ctx.runOK('company', 'add', '--name', 'Acme Corp', '--website', 'acme.com')
-    ctx.runOK('deal', 'add', '--title', 'Acme Enterprise Deal')
+    await ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--company', 'Acme')
+    await ctx.runOK('company', 'add', '--name', 'Acme Corp', '--website', 'acme.com')
+    await ctx.runOK('deal', 'add', '--title', 'Acme Enterprise Deal')
 
-    const out = ctx.runOK('search', 'Acme')
+    const out = await ctx.runOK('search', 'Acme')
     expect(out).toContain('Jane Doe')
     expect(out).toContain('Acme Corp')
     expect(out).toContain('Acme Enterprise Deal')
   })
 
-  test('filter by type', () => {
+  test('filter by type', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Acme Person')
-    ctx.runOK('company', 'add', '--name', 'Acme Corp')
+    await ctx.runOK('contact', 'add', '--name', 'Acme Person')
+    await ctx.runOK('company', 'add', '--name', 'Acme Corp')
 
-    const out = ctx.runOK('search', 'Acme', '--type', 'contact')
+    const out = await ctx.runOK('search', 'Acme', '--type', 'contact')
     expect(out).toContain('Acme Person')
     expect(out).not.toContain('Acme Corp')
   })
 
-  test('search in activity notes', () => {
+  test('search in activity notes', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK(
       'log',
       'note',
       'Discussed the enterprise pricing tier',
@@ -75,15 +75,15 @@ describe('search (keyword FTS5)', () => {
       'jane@acme.com',
     )
 
-    const out = ctx.runOK('search', 'enterprise pricing')
+    const out = await ctx.runOK('search', 'enterprise pricing')
     expect(out).toContain('enterprise pricing')
   })
 
-  test('no results returns empty array in json', () => {
+  test('no results returns empty array in json', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane Doe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane Doe')
 
-    const results = ctx.runJSON<unknown[]>(
+    const results = await ctx.runJSON<unknown[]>(
       'search',
       'zzzznonexistent',
       '--format',
@@ -92,9 +92,9 @@ describe('search (keyword FTS5)', () => {
     expect(results).toHaveLength(0)
   })
 
-  test('json format includes type field', () => {
+  test('json format includes type field', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -103,7 +103,7 @@ describe('search (keyword FTS5)', () => {
       'jane@acme.com',
     )
 
-    const results = ctx.runJSON<Array<{ type: string }>>(
+    const results = await ctx.runJSON<Array<{ type: string }>>(
       'search',
       'Jane',
       '--format',
@@ -114,10 +114,10 @@ describe('search (keyword FTS5)', () => {
   })
 })
 
-describe('find (semantic search)', () => {
-  test('natural language query returns relevant results', () => {
+describe('find (semantic search)', async () => {
+  test('natural language query returns relevant results', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -129,7 +129,7 @@ describe('find (semantic search)', () => {
       '--set',
       'location=London',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -140,7 +140,7 @@ describe('find (semantic search)', () => {
       'title=Engineer',
     )
 
-    const results = ctx.runJSON<Array<{ name: string }>>(
+    const results = await ctx.runJSON<Array<{ name: string }>>(
       'find',
       'fintech CTO from London',
       '--format',
@@ -150,10 +150,10 @@ describe('find (semantic search)', () => {
     expect(results[0].name).toBe('Alice Chen')
   })
 
-  test('limit results', () => {
+  test('limit results', async () => {
     const ctx = createTestContext()
     for (let i = 0; i < 5; i++) {
-      ctx.runOK(
+      await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -161,7 +161,7 @@ describe('find (semantic search)', () => {
       )
     }
 
-    const results = ctx.runJSON<unknown[]>(
+    const results = await ctx.runJSON<unknown[]>(
       'find',
       'person',
       '--limit',
@@ -172,12 +172,12 @@ describe('find (semantic search)', () => {
     expect(results.length).toBeLessThanOrEqual(2)
   })
 
-  test('filter by type', () => {
+  test('filter by type', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Acme Alice')
-    ctx.runOK('company', 'add', '--name', 'Acme Corp')
+    await ctx.runOK('contact', 'add', '--name', 'Acme Alice')
+    await ctx.runOK('company', 'add', '--name', 'Acme Corp')
 
-    const results = ctx.runJSON<Array<{ type: string }>>(
+    const results = await ctx.runJSON<Array<{ type: string }>>(
       'find',
       'acme',
       '--type',
@@ -190,9 +190,9 @@ describe('find (semantic search)', () => {
     }
   })
 
-  test('threshold filters low-scoring results', () => {
+  test('threshold filters low-scoring results', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -202,9 +202,9 @@ describe('find (semantic search)', () => {
       '--set',
       'title=CTO',
     )
-    ctx.runOK('contact', 'add', '--name', 'Bob Wilson', '--company', 'Acme')
+    await ctx.runOK('contact', 'add', '--name', 'Bob Wilson', '--company', 'Acme')
 
-    const highThreshold = ctx.runJSON<unknown[]>(
+    const highThreshold = await ctx.runJSON<unknown[]>(
       'find',
       'fintech CTO London',
       '--threshold',
@@ -212,7 +212,7 @@ describe('find (semantic search)', () => {
       '--format',
       'json',
     )
-    const lowThreshold = ctx.runJSON<unknown[]>(
+    const lowThreshold = await ctx.runJSON<unknown[]>(
       'find',
       'fintech CTO London',
       '--threshold',
@@ -224,31 +224,31 @@ describe('find (semantic search)', () => {
   })
 })
 
-describe('index', () => {
-  test('status shows index info', () => {
+describe('index', async () => {
+  test('status shows index info', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane')
+    await ctx.runOK('contact', 'add', '--name', 'Jane')
 
-    const out = ctx.runOK('index', 'status')
+    const out = await ctx.runOK('index', 'status')
     expect(out).toContain('contacts')
   })
 
-  test('rebuild then search still works', () => {
+  test('rebuild then search still works', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane')
-    ctx.runOK('index', 'rebuild')
+    await ctx.runOK('contact', 'add', '--name', 'Jane')
+    await ctx.runOK('index', 'rebuild')
 
-    const out = ctx.runOK('search', 'Jane')
+    const out = await ctx.runOK('search', 'Jane')
     expect(out).toContain('Jane')
   })
 
-  test('rebuild preserves company names in contact search', () => {
+  test('rebuild preserves company names in contact search', async () => {
     const ctx = createTestContext()
-    ctx.runOK('company', 'add', '--name', 'Acme Corp')
-    ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--company', 'Acme Corp')
+    await ctx.runOK('company', 'add', '--name', 'Acme Corp')
+    await ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--company', 'Acme Corp')
 
     // Before rebuild, search by company name finds the contact
-    const before = ctx.runJSON<Array<{ type: string; name?: string }>>(
+    const before = await ctx.runJSON<Array<{ type: string; name?: string }>>(
       'search',
       'Acme',
       '--format',
@@ -259,8 +259,8 @@ describe('index', () => {
     expect(contactBefore[0].name).toBe('Jane Doe')
 
     // After rebuild, company name should still be in the contact's search index
-    ctx.runOK('index', 'rebuild')
-    const after = ctx.runJSON<Array<{ type: string; name?: string }>>(
+    await ctx.runOK('index', 'rebuild')
+    const after = await ctx.runJSON<Array<{ type: string; name?: string }>>(
       'search',
       'Acme',
       '--format',
@@ -272,20 +272,20 @@ describe('index', () => {
   })
 })
 
-describe('search edge cases', () => {
-  test('search is case-insensitive', () => {
+describe('search edge cases', async () => {
+  test('search is case-insensitive', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane Doe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane Doe')
 
-    const results = ctx.runJSON<unknown[]>('search', 'jane', '--format', 'json')
+    const results = await ctx.runJSON<unknown[]>('search', 'jane', '--format', 'json')
     expect(results).toHaveLength(1)
   })
 
-  test('search finds companies', () => {
+  test('search finds companies', async () => {
     const ctx = createTestContext()
-    ctx.runOK('company', 'add', '--name', 'Acme Corp')
+    await ctx.runOK('company', 'add', '--name', 'Acme Corp')
 
-    const results = ctx.runJSON<Array<{ type: string }>>(
+    const results = await ctx.runJSON<Array<{ type: string }>>(
       'search',
       'Acme',
       '--format',
@@ -295,11 +295,11 @@ describe('search edge cases', () => {
     expect(results.some((r) => r.type === 'company')).toBe(true)
   })
 
-  test('search finds deals', () => {
+  test('search finds deals', async () => {
     const ctx = createTestContext()
-    ctx.runOK('deal', 'add', '--title', 'Enterprise License')
+    await ctx.runOK('deal', 'add', '--title', 'Enterprise License')
 
-    const results = ctx.runJSON<Array<{ type: string }>>(
+    const results = await ctx.runJSON<Array<{ type: string }>>(
       'search',
       'Enterprise',
       '--format',
@@ -309,12 +309,12 @@ describe('search edge cases', () => {
     expect(results.some((r) => r.type === 'deal')).toBe(true)
   })
 
-  test('search with special characters does not crash', () => {
+  test('search with special characters does not crash', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane')
+    await ctx.runOK('contact', 'add', '--name', 'Jane')
 
     // These should not throw — they should either return results or empty
-    const r1 = ctx.runJSON<unknown[]>(
+    const r1 = await ctx.runJSON<unknown[]>(
       'search',
       'test@email.com',
       '--format',
@@ -322,7 +322,7 @@ describe('search edge cases', () => {
     )
     expect(Array.isArray(r1)).toBe(true)
 
-    const r2 = ctx.runJSON<unknown[]>(
+    const r2 = await ctx.runJSON<unknown[]>(
       'search',
       'hello world',
       '--format',

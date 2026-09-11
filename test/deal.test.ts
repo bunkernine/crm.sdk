@@ -2,20 +2,19 @@ import { describe, expect, test } from 'bun:test'
 
 import { createTestContext } from './helpers.ts'
 
-describe('deal add', () => {
-  test('basic add returns prefixed ID', () => {
+describe('deal add', async () => {
+  test('basic add returns prefixed ID', async () => {
     const ctx = createTestContext()
-    const out = ctx.runOK('deal', 'add', '--title', 'Acme Enterprise')
+    const out = await ctx.runOK('deal', 'add', '--title', 'Acme Enterprise')
     expect(out.trim()).toStartWith('dl_')
   })
 
-  test('full add stores all fields', () => {
+  test('full add stores all fields', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
 
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -36,10 +35,9 @@ describe('deal add', () => {
         'q2',
         '--set',
         'source=outbound',
-      )
-      .trim()
+      )).trim()
 
-    const show = ctx.runOK('deal', 'show', id)
+    const show = await ctx.runOK('deal', 'show', id)
     expect(show).toContain('Acme Enterprise')
     expect(show).toContain('50000')
     expect(show).toContain('qualified')
@@ -48,13 +46,12 @@ describe('deal add', () => {
     expect(show).toContain('q2')
   })
 
-  test('supports multiple contacts', () => {
+  test('supports multiple contacts', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')
 
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -63,21 +60,19 @@ describe('deal add', () => {
         'jane@acme.com',
         '--contact',
         'bob@acme.com',
-      )
-      .trim()
+      )).trim()
 
-    const show = ctx.runOK('deal', 'show', id)
+    const show = await ctx.runOK('deal', 'show', id)
     expect(show).toContain('jane@acme.com')
     expect(show).toContain('bob@acme.com')
   })
 
-  test('multiple contacts in JSON output', () => {
+  test('multiple contacts in JSON output', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')
 
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -86,10 +81,9 @@ describe('deal add', () => {
         'jane@acme.com',
         '--contact',
         'bob@acme.com',
-      )
-      .trim()
+      )).trim()
 
-    const deal = ctx.runJSON<{ contacts: Array<{ name: string }> }>(
+    const deal = await ctx.runJSON<{ contacts: Array<{ name: string }> }>(
       'deal',
       'show',
       id,
@@ -99,11 +93,11 @@ describe('deal add', () => {
     expect(deal.contacts).toHaveLength(2)
   })
 
-  test('filter deals by any linked contact', () => {
+  test('filter deals by any linked contact', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')
+    await ctx.runOK(
       'deal',
       'add',
       '--title',
@@ -113,9 +107,9 @@ describe('deal add', () => {
       '--contact',
       'bob@acme.com',
     )
-    ctx.runOK('deal', 'add', '--title', 'Deal 2', '--contact', 'bob@acme.com')
+    await ctx.runOK('deal', 'add', '--title', 'Deal 2', '--contact', 'bob@acme.com')
 
-    const janeDeals = ctx.runJSON<unknown[]>(
+    const janeDeals = await ctx.runJSON<unknown[]>(
       'deal',
       'list',
       '--contact',
@@ -125,7 +119,7 @@ describe('deal add', () => {
     )
     expect(janeDeals).toHaveLength(1)
 
-    const bobDeals = ctx.runJSON<unknown[]>(
+    const bobDeals = await ctx.runJSON<unknown[]>(
       'deal',
       'list',
       '--contact',
@@ -136,52 +130,50 @@ describe('deal add', () => {
     expect(bobDeals).toHaveLength(2)
   })
 
-  test('edit deal to add/remove contacts', () => {
+  test('edit deal to add/remove contacts', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')
-    ctx.runOK('contact', 'add', '--name', 'Alice', '--email', 'alice@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Alice', '--email', 'alice@acme.com')
 
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'deal',
         'add',
         '--title',
         'Edit Deal',
         '--contact',
         'jane@acme.com',
-      )
-      .trim()
-    ctx.runOK('deal', 'edit', id, '--add-contact', 'bob@acme.com')
+      )).trim()
+    await ctx.runOK('deal', 'edit', id, '--add-contact', 'bob@acme.com')
 
-    let show = ctx.runOK('deal', 'show', id)
+    let show = await ctx.runOK('deal', 'show', id)
     expect(show).toContain('jane@acme.com')
     expect(show).toContain('bob@acme.com')
 
-    ctx.runOK('deal', 'edit', id, '--rm-contact', 'jane@acme.com')
-    show = ctx.runOK('deal', 'show', id)
+    await ctx.runOK('deal', 'edit', id, '--rm-contact', 'jane@acme.com')
+    show = await ctx.runOK('deal', 'show', id)
     expect(show).not.toContain('jane@acme.com')
     expect(show).toContain('bob@acme.com')
   })
 
-  test('fails without --title', () => {
+  test('fails without --title', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail('deal', 'add', '--value', '10000')
+    const result = await ctx.runFail('deal', 'add', '--value', '10000')
     expect(result.stderr).toContain('title')
   })
 
-  test('defaults to first pipeline stage', () => {
+  test('defaults to first pipeline stage', async () => {
     const ctx = createTestContext()
-    const id = ctx.runOK('deal', 'add', '--title', 'New Deal').trim()
-    const show = ctx.runOK('deal', 'show', id)
+    const id = (await ctx.runOK('deal', 'add', '--title', 'New Deal')).trim()
+    const show = await ctx.runOK('deal', 'show', id)
     expect(show).toContain('lead')
   })
 })
 
-describe('deal list', () => {
-  test('returns all deals', () => {
+describe('deal list', async () => {
+  test('returns all deals', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'add',
       '--title',
@@ -191,7 +183,7 @@ describe('deal list', () => {
       '--stage',
       'lead',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'add',
       '--title',
@@ -201,7 +193,7 @@ describe('deal list', () => {
       '--stage',
       'qualified',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'add',
       '--title',
@@ -212,16 +204,16 @@ describe('deal list', () => {
       'lead',
     )
 
-    const deals = ctx.runJSON<unknown[]>('deal', 'list', '--format', 'json')
+    const deals = await ctx.runJSON<unknown[]>('deal', 'list', '--format', 'json')
     expect(deals).toHaveLength(3)
   })
 
-  test('filter by stage', () => {
+  test('filter by stage', async () => {
     const ctx = createTestContext()
-    ctx.runOK('deal', 'add', '--title', 'Deal A', '--stage', 'lead')
-    ctx.runOK('deal', 'add', '--title', 'Deal B', '--stage', 'qualified')
+    await ctx.runOK('deal', 'add', '--title', 'Deal A', '--stage', 'lead')
+    await ctx.runOK('deal', 'add', '--title', 'Deal B', '--stage', 'qualified')
 
-    const deals = ctx.runJSON<unknown[]>(
+    const deals = await ctx.runJSON<unknown[]>(
       'deal',
       'list',
       '--stage',
@@ -232,13 +224,13 @@ describe('deal list', () => {
     expect(deals).toHaveLength(1)
   })
 
-  test('filter by value range', () => {
+  test('filter by value range', async () => {
     const ctx = createTestContext()
-    ctx.runOK('deal', 'add', '--title', 'Small', '--value', '5000')
-    ctx.runOK('deal', 'add', '--title', 'Medium', '--value', '25000')
-    ctx.runOK('deal', 'add', '--title', 'Large', '--value', '100000')
+    await ctx.runOK('deal', 'add', '--title', 'Small', '--value', '5000')
+    await ctx.runOK('deal', 'add', '--title', 'Medium', '--value', '25000')
+    await ctx.runOK('deal', 'add', '--title', 'Large', '--value', '100000')
 
-    const deals = ctx.runJSON<unknown[]>(
+    const deals = await ctx.runJSON<unknown[]>(
       'deal',
       'list',
       '--min-value',
@@ -251,10 +243,10 @@ describe('deal list', () => {
     expect(deals).toHaveLength(1)
   })
 
-  test('filter by linked contact', () => {
+  test('filter by linked contact', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK(
       'deal',
       'add',
       '--title',
@@ -262,9 +254,9 @@ describe('deal list', () => {
       '--contact',
       'jane@acme.com',
     )
-    ctx.runOK('deal', 'add', '--title', 'Unlinked Deal')
+    await ctx.runOK('deal', 'add', '--title', 'Unlinked Deal')
 
-    const deals = ctx.runJSON<unknown[]>(
+    const deals = await ctx.runJSON<unknown[]>(
       'deal',
       'list',
       '--contact',
@@ -275,13 +267,13 @@ describe('deal list', () => {
     expect(deals).toHaveLength(1)
   })
 
-  test('sort by value ascending', () => {
+  test('sort by value ascending', async () => {
     const ctx = createTestContext()
-    ctx.runOK('deal', 'add', '--title', 'Small', '--value', '5000')
-    ctx.runOK('deal', 'add', '--title', 'Large', '--value', '100000')
-    ctx.runOK('deal', 'add', '--title', 'Medium', '--value', '25000')
+    await ctx.runOK('deal', 'add', '--title', 'Small', '--value', '5000')
+    await ctx.runOK('deal', 'add', '--title', 'Large', '--value', '100000')
+    await ctx.runOK('deal', 'add', '--title', 'Medium', '--value', '25000')
 
-    const deals = ctx.runJSON<Array<{ value: number }>>(
+    const deals = await ctx.runJSON<Array<{ value: number }>>(
       'deal',
       'list',
       '--sort',
@@ -294,43 +286,39 @@ describe('deal list', () => {
   })
 })
 
-describe('deal move', () => {
-  test('changes stage', () => {
+describe('deal move', async () => {
+  test('changes stage', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Moving Deal', '--stage', 'lead')
-      .trim()
-    ctx.runOK('deal', 'move', id, '--stage', 'qualified')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Moving Deal', '--stage', 'lead')).trim()
+    await ctx.runOK('deal', 'move', id, '--stage', 'qualified')
 
-    const show = ctx.runOK('deal', 'show', id)
+    const show = await ctx.runOK('deal', 'show', id)
     expect(show).toContain('qualified')
   })
 
-  test('rejects invalid stage', () => {
+  test('rejects invalid stage', async () => {
     const ctx = createTestContext()
-    const id = ctx.runOK('deal', 'add', '--title', 'Deal').trim()
-    const result = ctx.runFail('deal', 'move', id, '--stage', 'nonexistent')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Deal')).trim()
+    const result = await ctx.runFail('deal', 'move', id, '--stage', 'nonexistent')
     expect(result.stderr).toContain('stage')
   })
 
-  test('records stage history', () => {
+  test('records stage history', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'History Deal', '--stage', 'lead')
-      .trim()
-    ctx.runOK('deal', 'move', id, '--stage', 'qualified')
-    ctx.runOK('deal', 'move', id, '--stage', 'proposal')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'History Deal', '--stage', 'lead')).trim()
+    await ctx.runOK('deal', 'move', id, '--stage', 'qualified')
+    await ctx.runOK('deal', 'move', id, '--stage', 'proposal')
 
-    const show = ctx.runOK('deal', 'show', id)
+    const show = await ctx.runOK('deal', 'show', id)
     expect(show).toContain('lead')
     expect(show).toContain('qualified')
     expect(show).toContain('proposal')
   })
 
-  test('with note', () => {
+  test('with note', async () => {
     const ctx = createTestContext()
-    const id = ctx.runOK('deal', 'add', '--title', 'Deal').trim()
-    ctx.runOK(
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Deal')).trim()
+    await ctx.runOK(
       'deal',
       'move',
       id,
@@ -340,14 +328,14 @@ describe('deal move', () => {
       'Signed annual contract',
     )
 
-    const show = ctx.runOK('deal', 'show', id)
+    const show = await ctx.runOK('deal', 'show', id)
     expect(show).toContain('Signed annual contract')
   })
 
-  test('closed-lost with note', () => {
+  test('closed-lost with note', async () => {
     const ctx = createTestContext()
-    const id = ctx.runOK('deal', 'add', '--title', 'Lost Deal').trim()
-    ctx.runOK(
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Lost Deal')).trim()
+    await ctx.runOK(
       'deal',
       'move',
       id,
@@ -357,19 +345,17 @@ describe('deal move', () => {
       'Budget cut',
     )
 
-    const show = ctx.runOK('deal', 'show', id)
+    const show = await ctx.runOK('deal', 'show', id)
     expect(show).toContain('closed-lost')
     expect(show).toContain('Budget cut')
   })
 
-  test('creates stage-change activity with timestamp', () => {
+  test('creates stage-change activity with timestamp', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Tracked Deal', '--stage', 'lead')
-      .trim()
-    ctx.runOK('deal', 'move', id, '--stage', 'qualified')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Tracked Deal', '--stage', 'lead')).trim()
+    await ctx.runOK('deal', 'move', id, '--stage', 'qualified')
 
-    const activities = ctx.runJSON<
+    const activities = await ctx.runJSON<
       Array<{ type: string; body: string; created_at: string }>
     >('activity', 'list', '--deal', id, '--format', 'json')
     const stageChange = activities.find((a) => a.type === 'stage-change')
@@ -379,16 +365,14 @@ describe('deal move', () => {
     expect(stageChange!.created_at).toBeTruthy()
   })
 
-  test('multiple moves create multiple stage-change activities with timestamps', () => {
+  test('multiple moves create multiple stage-change activities with timestamps', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Multi Move', '--stage', 'lead')
-      .trim()
-    ctx.runOK('deal', 'move', id, '--stage', 'qualified')
-    ctx.runOK('deal', 'move', id, '--stage', 'proposal')
-    ctx.runOK('deal', 'move', id, '--stage', 'closed-won', '--note', 'Signed')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Multi Move', '--stage', 'lead')).trim()
+    await ctx.runOK('deal', 'move', id, '--stage', 'qualified')
+    await ctx.runOK('deal', 'move', id, '--stage', 'proposal')
+    await ctx.runOK('deal', 'move', id, '--stage', 'closed-won', '--note', 'Signed')
 
-    const activities = ctx.runJSON<
+    const activities = await ctx.runJSON<
       Array<{ type: string; body: string; created_at: string }>
     >(
       'activity',
@@ -407,12 +391,10 @@ describe('deal move', () => {
     }
   })
 
-  test('stage-change activity includes note when provided', () => {
+  test('stage-change activity includes note when provided', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Noted Deal', '--stage', 'lead')
-      .trim()
-    ctx.runOK(
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Noted Deal', '--stage', 'lead')).trim()
+    await ctx.runOK(
       'deal',
       'move',
       id,
@@ -422,7 +404,7 @@ describe('deal move', () => {
       'Annual contract signed',
     )
 
-    const activities = ctx.runJSON<Array<{ type: string; body: string }>>(
+    const activities = await ctx.runJSON<Array<{ type: string; body: string }>>(
       'activity',
       'list',
       '--deal',
@@ -436,16 +418,14 @@ describe('deal move', () => {
     expect(activities[0].body).toContain('Annual contract signed')
   })
 
-  test('stage history is reconstructed from activities', () => {
+  test('stage history is reconstructed from activities', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'History Deal', '--stage', 'lead')
-      .trim()
-    ctx.runOK('deal', 'move', id, '--stage', 'qualified')
-    ctx.runOK('deal', 'move', id, '--stage', 'proposal')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'History Deal', '--stage', 'lead')).trim()
+    await ctx.runOK('deal', 'move', id, '--stage', 'qualified')
+    await ctx.runOK('deal', 'move', id, '--stage', 'proposal')
 
     // Deal show should include stage history with timestamps from activity log
-    const deal = ctx.runJSON<{
+    const deal = await ctx.runJSON<{
       stage_history: Array<{ stage: string; at: string }>
     }>('deal', 'show', id, '--format', 'json')
     expect(deal.stage_history.length).toBeGreaterThanOrEqual(3) // lead (initial) + qualified + proposal
@@ -455,18 +435,16 @@ describe('deal move', () => {
     }
   })
 
-  test('move to same stage is rejected', () => {
+  test('move to same stage is rejected', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Same Stage', '--stage', 'lead')
-      .trim()
-    const result = ctx.runFail('deal', 'move', id, '--stage', 'lead')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Same Stage', '--stage', 'lead')).trim()
+    const result = await ctx.runFail('deal', 'move', id, '--stage', 'lead')
     expect(result.stderr).toContain('already')
   })
 
-  test('move nonexistent deal fails', () => {
+  test('move nonexistent deal fails', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'deal',
       'move',
       'dl_nonexistent',
@@ -477,30 +455,26 @@ describe('deal move', () => {
   })
 })
 
-describe('deal edit', () => {
-  test('update title and value', () => {
+describe('deal edit', async () => {
+  test('update title and value', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Old Title', '--value', '10000')
-      .trim()
-    ctx.runOK('deal', 'edit', id, '--title', 'New Title', '--value', '20000')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Old Title', '--value', '10000')).trim()
+    await ctx.runOK('deal', 'edit', id, '--title', 'New Title', '--value', '20000')
 
-    const show = ctx.runOK('deal', 'show', id)
+    const show = await ctx.runOK('deal', 'show', id)
     expect(show).toContain('New Title')
     expect(show).toContain('20000')
   })
 
-  test('update company', () => {
+  test('update company', async () => {
     const ctx = createTestContext()
-    ctx.runOK('company', 'add', '--name', 'OldCo', '--website', 'oldco.com')
-    ctx.runOK('company', 'add', '--name', 'NewCo', '--website', 'newco.com')
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Switch Co', '--company', 'oldco.com')
-      .trim()
+    await ctx.runOK('company', 'add', '--name', 'OldCo', '--website', 'oldco.com')
+    await ctx.runOK('company', 'add', '--name', 'NewCo', '--website', 'newco.com')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Switch Co', '--company', 'oldco.com')).trim()
 
-    ctx.runOK('deal', 'edit', id, '--company', 'newco.com')
+    await ctx.runOK('deal', 'edit', id, '--company', 'newco.com')
 
-    const deal = ctx.runJSON<{ company: { id: string; name: string } }>(
+    const deal = await ctx.runJSON<{ company: { id: string; name: string } }>(
       'deal',
       'show',
       id,
@@ -510,22 +484,20 @@ describe('deal edit', () => {
     expect(deal.company.name).toBe('NewCo')
   })
 
-  test('update expected-close', () => {
+  test('update expected-close', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'deal',
         'add',
         '--title',
         'Date Deal',
         '--expected-close',
         '2026-06-01',
-      )
-      .trim()
+      )).trim()
 
-    ctx.runOK('deal', 'edit', id, '--expected-close', '2026-09-15')
+    await ctx.runOK('deal', 'edit', id, '--expected-close', '2026-09-15')
 
-    const deal = ctx.runJSON<{ expected_close: string }>(
+    const deal = await ctx.runJSON<{ expected_close: string }>(
       'deal',
       'show',
       id,
@@ -535,15 +507,13 @@ describe('deal edit', () => {
     expect(deal.expected_close).toBe('2026-09-15')
   })
 
-  test('update probability', () => {
+  test('update probability', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Prob Deal', '--probability', '25')
-      .trim()
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Prob Deal', '--probability', '25')).trim()
 
-    ctx.runOK('deal', 'edit', id, '--probability', '75')
+    await ctx.runOK('deal', 'edit', id, '--probability', '75')
 
-    const deal = ctx.runJSON<{ probability: number }>(
+    const deal = await ctx.runJSON<{ probability: number }>(
       'deal',
       'show',
       id,
@@ -553,13 +523,11 @@ describe('deal edit', () => {
     expect(deal.probability).toBe(75)
   })
 
-  test('update custom fields via --set and --unset', () => {
+  test('update custom fields via --set and --unset', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'CF Deal', '--set', 'source=inbound')
-      .trim()
+    const id = (await ctx.runOK('deal', 'add', '--title', 'CF Deal', '--set', 'source=inbound')).trim()
 
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'edit',
       id,
@@ -569,7 +537,7 @@ describe('deal edit', () => {
       'priority=high',
     )
 
-    const deal = ctx.runJSON<{ custom_fields: Record<string, string> }>(
+    const deal = await ctx.runJSON<{ custom_fields: Record<string, string> }>(
       'deal',
       'show',
       id,
@@ -579,8 +547,8 @@ describe('deal edit', () => {
     expect(deal.custom_fields.source).toBe('referral')
     expect(deal.custom_fields.priority).toBe('high')
 
-    ctx.runOK('deal', 'edit', id, '--unset', 'priority')
-    const deal2 = ctx.runJSON<{ custom_fields: Record<string, string> }>(
+    await ctx.runOK('deal', 'edit', id, '--unset', 'priority')
+    const deal2 = await ctx.runJSON<{ custom_fields: Record<string, string> }>(
       'deal',
       'show',
       id,
@@ -591,13 +559,11 @@ describe('deal edit', () => {
     expect(deal2.custom_fields.source).toBe('referral')
   })
 
-  test('add and remove tags', () => {
+  test('add and remove tags', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Tag Deal', '--tag', 'q2')
-      .trim()
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Tag Deal', '--tag', 'q2')).trim()
 
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'edit',
       id,
@@ -607,7 +573,7 @@ describe('deal edit', () => {
       'urgent',
     )
 
-    const deal = ctx.runJSON<{ tags: string[] }>(
+    const deal = await ctx.runJSON<{ tags: string[] }>(
       'deal',
       'show',
       id,
@@ -618,8 +584,8 @@ describe('deal edit', () => {
     expect(deal.tags).toContain('enterprise')
     expect(deal.tags).toContain('urgent')
 
-    ctx.runOK('deal', 'edit', id, '--rm-tag', 'q2')
-    const deal2 = ctx.runJSON<{ tags: string[] }>(
+    await ctx.runOK('deal', 'edit', id, '--rm-tag', 'q2')
+    const deal2 = await ctx.runJSON<{ tags: string[] }>(
       'deal',
       'show',
       id,
@@ -631,41 +597,37 @@ describe('deal edit', () => {
   })
 })
 
-describe('deal edit outputs ID', () => {
-  test('edit prints deal ID', () => {
+describe('deal edit outputs ID', async () => {
+  test('edit prints deal ID', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Out Deal', '--value', '5000')
-      .trim()
-    const editOut = ctx.runOK('deal', 'edit', id, '--value', '9000').trim()
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Out Deal', '--value', '5000')).trim()
+    const editOut = (await ctx.runOK('deal', 'edit', id, '--value', '9000')).trim()
     expect(editOut).toBe(id)
   })
 })
 
-describe('deal move outputs ID', () => {
-  test('move prints deal ID', () => {
+describe('deal move outputs ID', async () => {
+  test('move prints deal ID', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Move Deal', '--stage', 'lead')
-      .trim()
-    const moveOut = ctx.runOK('deal', 'move', id, '--stage', 'qualified').trim()
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Move Deal', '--stage', 'lead')).trim()
+    const moveOut = (await ctx.runOK('deal', 'move', id, '--stage', 'qualified')).trim()
     expect(moveOut).toBe(id)
   })
 })
 
-describe('deal rm', () => {
-  test('delete deal', () => {
+describe('deal rm', async () => {
+  test('delete deal', async () => {
     const ctx = createTestContext()
-    const id = ctx.runOK('deal', 'add', '--title', 'Delete Me').trim()
-    ctx.runOK('deal', 'rm', id, '--force')
-    ctx.runFail('deal', 'show', id)
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Delete Me')).trim()
+    await ctx.runOK('deal', 'rm', id, '--force')
+    await ctx.runFail('deal', 'show', id)
   })
 })
 
-describe('pipeline', () => {
-  test('shows pipeline summary', () => {
+describe('pipeline', async () => {
+  test('shows pipeline summary', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'add',
       '--title',
@@ -675,7 +637,7 @@ describe('pipeline', () => {
       '--stage',
       'lead',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'add',
       '--title',
@@ -685,7 +647,7 @@ describe('pipeline', () => {
       '--stage',
       'lead',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'add',
       '--title',
@@ -696,15 +658,15 @@ describe('pipeline', () => {
       'qualified',
     )
 
-    const out = ctx.runOK('pipeline')
+    const out = await ctx.runOK('pipeline')
     expect(out).toContain('lead')
     expect(out).toContain('qualified')
     expect(out).toContain('Total')
   })
 
-  test('json format', () => {
+  test('json format', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'add',
       '--title',
@@ -715,7 +677,7 @@ describe('pipeline', () => {
       'lead',
     )
 
-    const pipeline = ctx.runJSON<
+    const pipeline = await ctx.runJSON<
       Array<{ stage: string; count: number; value: number }>
     >('pipeline', '--format', 'json')
     expect(pipeline.length).toBeGreaterThan(0)
@@ -725,10 +687,10 @@ describe('pipeline', () => {
   })
 })
 
-describe('deal auto-create', () => {
-  test('add with nonexistent contact auto-creates contact', () => {
+describe('deal auto-create', async () => {
+  test('add with nonexistent contact auto-creates contact', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'add',
       '--title',
@@ -738,7 +700,7 @@ describe('deal auto-create', () => {
     )
 
     // Contact should have been auto-created
-    const contacts = ctx.runJSON<Array<{ name: string; emails: string[] }>>(
+    const contacts = await ctx.runJSON<Array<{ name: string; emails: string[] }>>(
       'contact',
       'list',
       '--format',
@@ -749,9 +711,9 @@ describe('deal auto-create', () => {
     expect(contacts[0].emails).toContain('nobody@nowhere.com')
   })
 
-  test('add with nonexistent company reference fails', () => {
+  test('add with nonexistent company reference fails', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'deal',
       'add',
       '--title',
@@ -762,24 +724,24 @@ describe('deal auto-create', () => {
     expect(result.stderr).not.toBe('')
   })
 
-  test('show nonexistent deal fails', () => {
+  test('show nonexistent deal fails', async () => {
     const ctx = createTestContext()
-    ctx.runFail('deal', 'show', 'dl_nonexistent')
+    await ctx.runFail('deal', 'show', 'dl_nonexistent')
   })
 
-  test('edit nonexistent deal fails', () => {
+  test('edit nonexistent deal fails', async () => {
     const ctx = createTestContext()
-    ctx.runFail('deal', 'edit', 'dl_nonexistent', '--title', 'New Title')
+    await ctx.runFail('deal', 'edit', 'dl_nonexistent', '--title', 'New Title')
   })
 
-  test('rm nonexistent deal fails', () => {
+  test('rm nonexistent deal fails', async () => {
     const ctx = createTestContext()
-    ctx.runFail('deal', 'rm', 'dl_nonexistent', '--force')
+    await ctx.runFail('deal', 'rm', 'dl_nonexistent', '--force')
   })
 
-  test('invalid probability rejects', () => {
+  test('invalid probability rejects', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'deal',
       'add',
       '--title',
@@ -790,9 +752,9 @@ describe('deal auto-create', () => {
     expect(result.stderr).toContain('probability')
   })
 
-  test('negative value rejects', () => {
+  test('negative value rejects', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'deal',
       'add',
       '--title',
@@ -803,9 +765,9 @@ describe('deal auto-create', () => {
     expect(result.stderr).toContain('value')
   })
 
-  test('invalid expected-close date rejects', () => {
+  test('invalid expected-close date rejects', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'deal',
       'add',
       '--title',
@@ -816,26 +778,22 @@ describe('deal auto-create', () => {
     expect(result.stderr).not.toBe('')
   })
 
-  test('delete contact sets deal contacts to null', () => {
+  test('delete contact sets deal contacts to null', async () => {
     const ctx = createTestContext()
-    const contactId = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-      .trim()
-    const dealId = ctx
-      .runOK(
+    const contactId = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')).trim()
+    const dealId = (await ctx.runOK(
         'deal',
         'add',
         '--title',
         'Orphan Deal',
         '--contact',
         'jane@acme.com',
-      )
-      .trim()
+      )).trim()
 
-    ctx.runOK('contact', 'rm', contactId, '--force')
+    await ctx.runOK('contact', 'rm', contactId, '--force')
 
     // Deal should still exist but contact reference should be cleared
-    const deal = ctx.runJSON<{ contacts: unknown[] }>(
+    const deal = await ctx.runJSON<{ contacts: unknown[] }>(
       'deal',
       'show',
       dealId,
@@ -845,22 +803,20 @@ describe('deal auto-create', () => {
     expect(deal.contacts).toHaveLength(0)
   })
 
-  test('delete company sets deal company to null', () => {
+  test('delete company sets deal company to null', async () => {
     const ctx = createTestContext()
-    ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
-    const dealId = ctx
-      .runOK('deal', 'add', '--title', 'Orphan Deal', '--company', 'acme.com')
-      .trim()
+    await ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
+    const dealId = (await ctx.runOK('deal', 'add', '--title', 'Orphan Deal', '--company', 'acme.com')).trim()
 
-    const companies = ctx.runJSON<Array<{ id: string }>>(
+    const companies = await ctx.runJSON<Array<{ id: string }>>(
       'company',
       'list',
       '--format',
       'json',
     )
-    ctx.runOK('company', 'rm', companies[0].id, '--force')
+    await ctx.runOK('company', 'rm', companies[0].id, '--force')
 
-    const deal = ctx.runJSON<{ company: unknown }>(
+    const deal = await ctx.runJSON<{ company: unknown }>(
       'deal',
       'show',
       dealId,
@@ -871,29 +827,25 @@ describe('deal auto-create', () => {
   })
 })
 
-describe('deal show', () => {
-  test('includes linked company', () => {
+describe('deal show', async () => {
+  test('includes linked company', async () => {
     const ctx = createTestContext()
-    ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Acme Deal', '--company', 'acme.com')
-      .trim()
+    await ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Acme Deal', '--company', 'acme.com')).trim()
 
-    const coShow = ctx.runOK('company', 'show', 'acme.com')
+    const coShow = await ctx.runOK('company', 'show', 'acme.com')
     expect(coShow).toContain('Acme Deal')
 
-    const dlShow = ctx.runOK('deal', 'show', id)
+    const dlShow = await ctx.runOK('deal', 'show', id)
     expect(dlShow).toContain('Acme')
   })
 })
 
-describe('deal move notes', () => {
-  test('note appears in stage-change activity body', () => {
+describe('deal move notes', async () => {
+  test('note appears in stage-change activity body', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'D', '--stage', 'lead')
-      .trim()
-    ctx.runOK(
+    const id = (await ctx.runOK('deal', 'add', '--title', 'D', '--stage', 'lead')).trim()
+    await ctx.runOK(
       'deal',
       'move',
       id,
@@ -903,7 +855,7 @@ describe('deal move notes', () => {
       'Too slow',
     )
 
-    const activities = ctx.runJSON<Array<{ type: string; body: string }>>(
+    const activities = await ctx.runJSON<Array<{ type: string; body: string }>>(
       'activity',
       'list',
       '--deal',
@@ -917,14 +869,12 @@ describe('deal move notes', () => {
     expect(sc!.body).toContain('closed-lost')
   })
 
-  test('stage-change body contains from and to stages', () => {
+  test('stage-change body contains from and to stages', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'D', '--stage', 'lead')
-      .trim()
-    ctx.runOK('deal', 'move', id, '--stage', 'qualified')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'D', '--stage', 'lead')).trim()
+    await ctx.runOK('deal', 'move', id, '--stage', 'qualified')
 
-    const activities = ctx.runJSON<Array<{ type: string; body: string }>>(
+    const activities = await ctx.runJSON<Array<{ type: string; body: string }>>(
       'activity',
       'list',
       '--deal',
@@ -936,14 +886,12 @@ describe('deal move notes', () => {
     expect(sc!.body).toMatch(/from lead to qualified/)
   })
 
-  test('backward stage move is allowed', () => {
+  test('backward stage move is allowed', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'Regress', '--stage', 'qualified')
-      .trim()
-    ctx.runOK('deal', 'move', id, '--stage', 'lead')
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Regress', '--stage', 'qualified')).trim()
+    await ctx.runOK('deal', 'move', id, '--stage', 'lead')
 
-    const data = ctx.runJSON<{ stage: string }>(
+    const data = await ctx.runJSON<{ stage: string }>(
       'deal',
       'show',
       id,
@@ -954,11 +902,10 @@ describe('deal move notes', () => {
   })
 })
 
-describe('deal probability edge cases', () => {
-  test('probability 0 is allowed', () => {
+describe('deal probability edge cases', async () => {
+  test('probability 0 is allowed', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -967,9 +914,8 @@ describe('deal probability edge cases', () => {
         '1000',
         '--probability',
         '0',
-      )
-      .trim()
-    const data = ctx.runJSON<{ probability: number }>(
+      )).trim()
+    const data = await ctx.runJSON<{ probability: number }>(
       'deal',
       'show',
       id,
@@ -979,10 +925,9 @@ describe('deal probability edge cases', () => {
     expect(data.probability).toBe(0)
   })
 
-  test('probability 100 is allowed', () => {
+  test('probability 100 is allowed', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -991,9 +936,8 @@ describe('deal probability edge cases', () => {
         '5000',
         '--probability',
         '100',
-      )
-      .trim()
-    const data = ctx.runJSON<{ probability: number }>(
+      )).trim()
+    const data = await ctx.runJSON<{ probability: number }>(
       'deal',
       'show',
       id,
@@ -1004,13 +948,13 @@ describe('deal probability edge cases', () => {
   })
 })
 
-describe('deal list --reverse', () => {
-  test('reverses listing order', () => {
+describe('deal list --reverse', async () => {
+  test('reverses listing order', async () => {
     const ctx = createTestContext()
-    ctx.runOK('deal', 'add', '--title', 'Alpha', '--value', '100')
-    ctx.runOK('deal', 'add', '--title', 'Beta', '--value', '200')
+    await ctx.runOK('deal', 'add', '--title', 'Alpha', '--value', '100')
+    await ctx.runOK('deal', 'add', '--title', 'Beta', '--value', '200')
 
-    const normal = ctx.runJSON<{ title: string }[]>(
+    const normal = await ctx.runJSON<{ title: string }[]>(
       'deal',
       'list',
       '--sort',
@@ -1018,7 +962,7 @@ describe('deal list --reverse', () => {
       '--format',
       'json',
     )
-    const reversed = ctx.runJSON<{ title: string }[]>(
+    const reversed = await ctx.runJSON<{ title: string }[]>(
       'deal',
       'list',
       '--sort',
@@ -1032,14 +976,14 @@ describe('deal list --reverse', () => {
   })
 })
 
-describe('deal list --offset', () => {
-  test('skips first N results', () => {
+describe('deal list --offset', async () => {
+  test('skips first N results', async () => {
     const ctx = createTestContext()
-    ctx.runOK('deal', 'add', '--title', 'A')
-    ctx.runOK('deal', 'add', '--title', 'B')
-    ctx.runOK('deal', 'add', '--title', 'C')
+    await ctx.runOK('deal', 'add', '--title', 'A')
+    await ctx.runOK('deal', 'add', '--title', 'B')
+    await ctx.runOK('deal', 'add', '--title', 'C')
 
-    const data = ctx.runJSON<unknown[]>(
+    const data = await ctx.runJSON<unknown[]>(
       'deal',
       'list',
       '--sort',
@@ -1053,22 +997,20 @@ describe('deal list --offset', () => {
   })
 })
 
-describe('deal rm --force', () => {
-  test('rm without --force fails in non-interactive mode', () => {
+describe('deal rm --force', async () => {
+  test('rm without --force fails in non-interactive mode', async () => {
     const ctx = createTestContext()
-    const id = ctx.runOK('deal', 'add', '--title', 'Test').trim()
-    const result = ctx.runFail('deal', 'rm', id)
+    const id = (await ctx.runOK('deal', 'add', '--title', 'Test')).trim()
+    const result = await ctx.runFail('deal', 'rm', id)
     expect(result.stderr).toContain('--force')
   })
 })
 
-describe('deal move --note on any stage', () => {
-  test('note is stored for any stage move', () => {
+describe('deal move --note on any stage', async () => {
+  test('note is stored for any stage move', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('deal', 'add', '--title', 'D', '--stage', 'lead')
-      .trim()
-    ctx.runOK(
+    const id = (await ctx.runOK('deal', 'add', '--title', 'D', '--stage', 'lead')).trim()
+    await ctx.runOK(
       'deal',
       'move',
       id,
@@ -1078,7 +1020,7 @@ describe('deal move --note on any stage', () => {
       'Strong fit',
     )
 
-    const activities = ctx.runJSON<{ body: string }[]>(
+    const activities = await ctx.runJSON<{ body: string }[]>(
       'activity',
       'list',
       '--deal',

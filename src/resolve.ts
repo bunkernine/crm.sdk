@@ -2,24 +2,23 @@ import { eq } from 'drizzle-orm'
 
 import type { CRMConfig } from './config'
 import type { DB } from './db'
-import type { Company, Contact, Deal } from './drizzle-schema'
+import type { CompanyRow, ContactRow, DealRow } from './drizzle-schema'
 import * as schema from './drizzle-schema'
-import { safeJSON } from './format.ts'
+import { asArray } from './lib/helpers'
 import {
   extractPhoneDigits,
   phoneMatchesByDigits,
   tryExtractSocialHandle,
   tryNormalizePhone,
   tryNormalizeWebsite,
-} from './normalize.ts'
+} from './normalize'
 
 export async function resolveContact(
   db: DB,
   rawRef: string,
   config?: CRMConfig,
-): Promise<Contact | null> {
+): Promise<ContactRow | null> {
   const ref = rawRef.trim()
-  // By ID
   if (ref.startsWith('ct_')) {
     const results = await db
       .select()
@@ -28,18 +27,15 @@ export async function resolveContact(
     return results[0] || null
   }
 
-  // By email
   if (ref.includes('@') && !ref.includes('/')) {
     const handle = ref.startsWith('@') ? ref.slice(1) : ref
-    // First try as email
     const all = await db.select().from(schema.contacts)
     for (const c of all) {
-      const emails: string[] = safeJSON(c.emails)
+      const emails = asArray(c.emails)
       if (emails.some((e) => e.toLowerCase() === ref.toLowerCase())) {
         return c
       }
     }
-    // Try as social handle with @ prefix
     for (const c of all) {
       if (
         c.linkedin === handle ||
@@ -53,7 +49,6 @@ export async function resolveContact(
     return null
   }
 
-  // Try social URL extraction
   const extracted = tryExtractSocialHandle(ref)
   if (extracted) {
     const col = extracted.platform as 'linkedin' | 'x' | 'bluesky' | 'telegram'
@@ -66,25 +61,21 @@ export async function resolveContact(
     }
   }
 
-  // Try phone normalization
   const phoneNorm = tryNormalizePhone(ref, config?.phone?.default_country)
   if (phoneNorm) {
     const all = await db.select().from(schema.contacts)
     for (const c of all) {
-      const phones: string[] = safeJSON(c.phones)
-      if (phones.includes(phoneNorm)) {
+      if (asArray(c.phones).includes(phoneNorm)) {
         return c
       }
     }
   }
 
-  // Try digit-based phone matching
   const digits = extractPhoneDigits(ref)
   if (digits.length >= 7) {
     const all = await db.select().from(schema.contacts)
     for (const c of all) {
-      const phones: string[] = safeJSON(c.phones)
-      for (const p of phones) {
+      for (const p of asArray(c.phones)) {
         if (phoneMatchesByDigits(p, digits)) {
           return c
         }
@@ -92,7 +83,6 @@ export async function resolveContact(
     }
   }
 
-  // Try as social handle (raw or with dots like bsky handles)
   {
     const handle = ref.startsWith('@') ? ref.slice(1) : ref
     const all = await db.select().from(schema.contacts)
@@ -115,9 +105,8 @@ export async function resolveCompany(
   db: DB,
   rawRef: string,
   config?: CRMConfig,
-): Promise<Company | null> {
+): Promise<CompanyRow | null> {
   const ref = rawRef.trim()
-  // By ID
   if (ref.startsWith('co_')) {
     const results = await db
       .select()
@@ -126,35 +115,29 @@ export async function resolveCompany(
     return results[0] || null
   }
 
-  // By website (normalize and check)
   const all = await db.select().from(schema.companies)
   const normalizedWeb = tryNormalizeWebsite(ref)
   if (normalizedWeb) {
     for (const co of all) {
-      const websites: string[] = safeJSON(co.websites)
-      if (websites.some((w) => w === normalizedWeb)) {
+      if (asArray(co.websites).some((w) => w === normalizedWeb)) {
         return co
       }
     }
   }
 
-  // By phone
   const phoneNorm = tryNormalizePhone(ref, config?.phone?.default_country)
   if (phoneNorm) {
     for (const co of all) {
-      const phones: string[] = safeJSON(co.phones)
-      if (phones.includes(phoneNorm)) {
+      if (asArray(co.phones).includes(phoneNorm)) {
         return co
       }
     }
   }
 
-  // By digit matching
   const digits = extractPhoneDigits(ref)
   if (digits.length >= 7) {
     for (const co of all) {
-      const phones: string[] = safeJSON(co.phones)
-      for (const p of phones) {
+      for (const p of asArray(co.phones)) {
         if (phoneMatchesByDigits(p, digits)) {
           return co
         }
@@ -162,7 +145,6 @@ export async function resolveCompany(
     }
   }
 
-  // By name
   for (const co of all) {
     if (co.name === ref) {
       return co
@@ -175,7 +157,7 @@ export async function resolveCompany(
 export async function resolveDeal(
   db: DB,
   rawRef: string,
-): Promise<Deal | null> {
+): Promise<DealRow | null> {
   const ref = rawRef.trim()
   if (ref.startsWith('dl_')) {
     const results = await db
@@ -191,35 +173,32 @@ export async function resolveEntity(
   db: DB,
   rawRef: string,
   config?: CRMConfig,
-): Promise<{ type: string; entity: Contact | Company | Deal } | null> {
-  const ref = rawRef.trim()
-  // Try contact first
-  const contact = await resolveContact(db, ref, config)
+): Promise<
+  | { type: 'contact'; entity: ContactRow }
+  | { type: 'company'; entity: CompanyRow }
+  | { type: 'deal'; entity: DealRow }
+  | null
+> {
+  const contact = await resolveContact(db, rawRef, config)
   if (contact) {
     return { type: 'contact', entity: contact }
   }
-
-  // Try company
-  const company = await resolveCompany(db, ref, config)
+  const company = await resolveCompany(db, rawRef, config)
   if (company) {
     return { type: 'company', entity: company }
   }
-
-  // Try deal
-  const deal = await resolveDeal(db, ref)
+  const deal = await resolveDeal(db, rawRef)
   if (deal) {
     return { type: 'deal', entity: deal }
   }
-
   return null
 }
 
 export async function resolveCompanyForLink(
   db: DB,
   rawRef: string,
-): Promise<Company | null> {
+): Promise<CompanyRow | null> {
   const ref = rawRef.trim()
-  // Try by ID
   if (ref.startsWith('co_')) {
     const results = await db
       .select()
@@ -228,19 +207,16 @@ export async function resolveCompanyForLink(
     return results[0] || null
   }
 
-  // Try by website
   const all = await db.select().from(schema.companies)
   const normalizedWeb = tryNormalizeWebsite(ref)
   if (normalizedWeb) {
     for (const co of all) {
-      const websites: string[] = safeJSON(co.websites)
-      if (websites.some((w) => w === normalizedWeb)) {
+      if (asArray(co.websites).some((w) => w === normalizedWeb)) {
         return co
       }
     }
   }
 
-  // Try by name
   for (const co of all) {
     if (co.name === ref) {
       return co

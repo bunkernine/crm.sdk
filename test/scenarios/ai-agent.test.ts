@@ -30,8 +30,8 @@ import { describe, expect, test } from 'bun:test'
 
 import { createTestContext } from '../helpers'
 
-describe('scenario: AI agent using CRM as structured data layer', () => {
-  test('agent ingests contacts, enriches them, and generates reports', () => {
+describe('scenario: AI agent using CRM as structured data layer', async () => {
+  test('agent ingests contacts, enriches them, and generates reports', async () => {
     const ctx = createTestContext()
 
     // ── Step 1: Agent creates initial contacts from parsed email data ──
@@ -71,8 +71,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
 
     const contactIds: string[] = []
     for (const c of contacts) {
-      const id = ctx
-        .runOK(
+      const id = (await ctx.runOK(
           'contact',
           'add',
           '--name',
@@ -83,8 +82,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
           c.company,
           '--set',
           `title=${c.title}`,
-        )
-        .trim()
+        )).trim()
       contactIds.push(id)
     }
 
@@ -95,7 +93,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
     }
 
     // ── Step 2: Agent reads back contacts via JSON to verify ──
-    const allContacts = ctx.runJSON<
+    const allContacts = await ctx.runJSON<
       Array<{ id: string; name: string; emails: string[] }>
     >('contact', 'list', '--format', 'json')
     expect(allContacts).toHaveLength(5)
@@ -107,7 +105,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
     }
 
     // ── Step 3: Agent uses show to get full details by ID ──
-    const detail = ctx.runJSON<{
+    const detail = await ctx.runJSON<{
       id: string
       name: string
       emails: string[]
@@ -121,7 +119,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
     expect(detail.custom_fields.title).toBe('Engineering Manager')
 
     // ── Step 4: Agent enriches contacts (simulating web research) ──
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'edit',
       contactIds[0],
@@ -132,7 +130,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
       '--set',
       'interest=high',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'edit',
       contactIds[1],
@@ -143,7 +141,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
       '--set',
       'interest=medium',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'edit',
       contactIds[2],
@@ -152,7 +150,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
       '--set',
       'interest=high',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'edit',
       contactIds[3],
@@ -163,7 +161,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
       '--set',
       'interest=high',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'edit',
       contactIds[4],
@@ -174,7 +172,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
     )
 
     // ── Step 5: Agent creates deals for high-interest contacts ──
-    const highInterest = ctx.runJSON<Array<{ id: string; name: string }>>(
+    const highInterest = await ctx.runJSON<Array<{ id: string; name: string }>>(
       'contact',
       'list',
       '--filter',
@@ -186,8 +184,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
 
     const dealIds: string[] = []
     for (const c of highInterest) {
-      const dealId = ctx
-        .runOK(
+      const dealId = (await ctx.runOK(
           'deal',
           'add',
           '--title',
@@ -196,8 +193,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
           '10000',
           '--contact',
           c.id,
-        )
-        .trim()
+        )).trim()
       dealIds.push(dealId)
     }
 
@@ -207,7 +203,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
     }
 
     // ── Step 6: Agent logs activities using IDs ──
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'email',
       'Automated intro email sent',
@@ -216,7 +212,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
       '--deal',
       dealIds[0],
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'email',
       'Automated intro email sent',
@@ -225,7 +221,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
       '--deal',
       dealIds[1],
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'email',
       'Automated intro email sent',
@@ -236,7 +232,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
     )
 
     // ── Step 7: Agent queries pipeline for summary ──
-    const pipeline = ctx.runJSON<
+    const pipeline = await ctx.runJSON<
       Array<{ stage: string; count: number; value: number }>
     >('pipeline', '--format', 'json')
     const leadStage = pipeline.find((s) => s.stage === 'lead')
@@ -244,14 +240,14 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
     expect(leadStage?.value).toBe(30_000) // 3 × $10k
 
     // ── Step 8: Agent uses search for RAG-style lookup ──
-    const searchResults = ctx.runJSON<
+    const searchResults = await ctx.runJSON<
       Array<{ type: string; id: string; name?: string; title?: string }>
     >('search', 'techcorp', '--format', 'json')
     // Should find company and contact
     expect(searchResults.length).toBeGreaterThanOrEqual(1)
 
     // Agent uses find for fuzzy matching
-    const findResults = ctx.runJSON<Array<{ type: string; id: string }>>(
+    const findResults = await ctx.runJSON<Array<{ type: string; id: string }>>(
       'find',
       'nordic',
       '--format',
@@ -261,7 +257,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
 
     // ── Step 9: Agent handles errors gracefully ──
     // Nonexistent entity returns non-zero exit
-    const badShow = ctx.run(
+    const badShow = await ctx.runAsync(
       'contact',
       'show',
       'ct_nonexistent',
@@ -271,11 +267,11 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
     expect(badShow.exitCode).not.toBe(0)
 
     // Invalid deal move
-    const badMove = ctx.run('deal', 'move', dealIds[0], '--stage', 'lead') // already in lead
+    const badMove = await ctx.runAsync('deal', 'move', dealIds[0], '--stage', 'lead') // already in lead
     expect(badMove.exitCode).not.toBe(0)
 
     // ── Step 10: Full export for analysis ──
-    const fullExport = ctx.runJSON<{
+    const fullExport = await ctx.runJSON<{
       contacts: unknown[]
       companies: unknown[]
       deals: unknown[]
@@ -287,9 +283,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
     expect(fullExport.activities.length).toBeGreaterThanOrEqual(3) // at least the 3 emails
 
     // ── Step 11: Agent uses --format ids for bulk operations ──
-    const allDealIds = ctx
-      .runOK('deal', 'list', '--format', 'ids')
-      .trim()
+    const allDealIds = (await ctx.runOK('deal', 'list', '--format', 'ids')).trim()
       .split('\n')
     expect(allDealIds).toHaveLength(3)
     for (const id of allDealIds) {
@@ -298,7 +292,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
 
     // Bulk move all deals to qualified
     for (const id of allDealIds) {
-      ctx.runOK(
+      await ctx.runOK(
         'deal',
         'move',
         id,
@@ -310,7 +304,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
     }
 
     // Verify all moved
-    const qualifiedDeals = ctx.runJSON<Array<{ stage: string }>>(
+    const qualifiedDeals = await ctx.runJSON<Array<{ stage: string }>>(
       'deal',
       'list',
       '--stage',
@@ -321,7 +315,7 @@ describe('scenario: AI agent using CRM as structured data layer', () => {
     expect(qualifiedDeals).toHaveLength(3)
 
     // ── Step 12: Agent reads conversion report ──
-    const conversion = ctx.runJSON<
+    const conversion = await ctx.runJSON<
       Array<{ stage: string; entered: number; advanced: number }>
     >('report', 'conversion', '--format', 'json')
     const leadConv = conversion.find((s) => s.stage === 'lead')

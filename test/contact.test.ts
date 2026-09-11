@@ -2,17 +2,16 @@ import { describe, expect, test } from 'bun:test'
 
 import { createTestContext } from './helpers.ts'
 
-describe('contact add', () => {
-  test('basic add returns prefixed ID', () => {
+describe('contact add', async () => {
+  test('basic add returns prefixed ID', async () => {
     const ctx = createTestContext()
-    const out = ctx.runOK('contact', 'add', '--name', 'Jane Doe')
+    const out = await ctx.runOK('contact', 'add', '--name', 'Jane Doe')
     expect(out.trim()).toStartWith('ct_')
   })
 
-  test('full add stores all fields', () => {
+  test('full add stores all fields', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -37,10 +36,9 @@ describe('contact add', () => {
         'title=CTO',
         '--set',
         'source=conference',
-      )
-      .trim()
+      )).trim()
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('Jane Doe')
     expect(show).toContain('jane@acme.com')
     expect(show).toContain('(212) 555-1234')
@@ -53,10 +51,9 @@ describe('contact add', () => {
     expect(show).toContain('enterprise')
   })
 
-  test('multiple companies on create', () => {
+  test('multiple companies on create', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -65,17 +62,16 @@ describe('contact add', () => {
         'Acme Corp',
         '--company',
         'Globex',
-      )
-      .trim()
+      )).trim()
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('Acme Corp')
     expect(show).toContain('Globex')
   })
 
-  test('fails without --name', () => {
+  test('fails without --name', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--email',
@@ -84,9 +80,9 @@ describe('contact add', () => {
     expect(result.stderr).toContain('name')
   })
 
-  test('rejects duplicate email', () => {
+  test('rejects duplicate email', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -94,7 +90,7 @@ describe('contact add', () => {
       '--email',
       'jane@acme.com',
     )
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -105,10 +101,9 @@ describe('contact add', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('multiple emails on create', () => {
+  test('multiple emails on create', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -117,18 +112,16 @@ describe('contact add', () => {
         'jane@acme.com',
         '--email',
         'jane.doe@gmail.com',
-      )
-      .trim()
+      )).trim()
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('jane@acme.com')
     expect(show).toContain('jane.doe@gmail.com')
   })
 
-  test('multiple phones on create', () => {
+  test('multiple phones on create', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -137,17 +130,16 @@ describe('contact add', () => {
         '+1-212-555-1234',
         '--phone',
         '+44-20-7946-0958',
-      )
-      .trim()
+      )).trim()
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('(212) 555-1234')
     expect(show).toContain('+44 20 7946 0958')
   })
 
-  test('lookup by any email when contact has multiple', () => {
+  test('lookup by any email when contact has multiple', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -158,15 +150,15 @@ describe('contact add', () => {
       'jane.doe@gmail.com',
     )
 
-    const show1 = ctx.runOK('contact', 'show', 'jane@acme.com')
-    const show2 = ctx.runOK('contact', 'show', 'jane.doe@gmail.com')
+    const show1 = await ctx.runOK('contact', 'show', 'jane@acme.com')
+    const show2 = await ctx.runOK('contact', 'show', 'jane.doe@gmail.com')
     expect(show1).toContain('Jane Doe')
     expect(show2).toContain('Jane Doe')
   })
 
-  test('duplicate check applies across all emails', () => {
+  test('duplicate check applies across all emails', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -177,7 +169,7 @@ describe('contact add', () => {
       'jane@personal.com',
     )
     // Adding a new contact with jane@personal.com should fail — it belongs to Jane.
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -189,10 +181,10 @@ describe('contact add', () => {
   })
 })
 
-describe('contact show', () => {
-  test('by email', () => {
+describe('contact show', async () => {
+  test('by email', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -200,13 +192,13 @@ describe('contact show', () => {
       '--email',
       'jane@acme.com',
     )
-    const out = ctx.runOK('contact', 'show', 'jane@acme.com')
+    const out = await ctx.runOK('contact', 'show', 'jane@acme.com')
     expect(out).toContain('Jane Doe')
   })
 
-  test('by phone', () => {
+  test('by phone', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -214,13 +206,13 @@ describe('contact show', () => {
       '--phone',
       '+1-212-555-1234',
     )
-    const out = ctx.runOK('contact', 'show', '+12125551234')
+    const out = await ctx.runOK('contact', 'show', '+12125551234')
     expect(out).toContain('Jane Doe')
   })
 
-  test('contact with phone but no email is lookupable by phone', () => {
+  test('contact with phone but no email is lookupable by phone', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -228,20 +220,20 @@ describe('contact show', () => {
       '--phone',
       '+44-20-7946-0958',
     )
-    const out = ctx.runOK('contact', 'show', '+442079460958')
+    const out = await ctx.runOK('contact', 'show', '+442079460958')
     expect(out).toContain('Phone Only')
   })
 
-  test('not found returns error', () => {
+  test('not found returns error', async () => {
     const ctx = createTestContext()
-    ctx.runFail('contact', 'show', 'nonexistent@example.com')
+    await ctx.runFail('contact', 'show', 'nonexistent@example.com')
   })
 })
 
-describe('contact list', () => {
-  test('empty database returns empty array', () => {
+describe('contact list', async () => {
+  test('empty database returns empty array', async () => {
     const ctx = createTestContext()
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--format',
@@ -250,9 +242,9 @@ describe('contact list', () => {
     expect(contacts).toEqual([])
   })
 
-  test('returns all contacts', () => {
+  test('returns all contacts', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -260,8 +252,8 @@ describe('contact list', () => {
       '--email',
       'alice@example.com',
     )
-    ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@example.com')
-    ctx.runOK(
+    await ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@example.com')
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -270,7 +262,7 @@ describe('contact list', () => {
       'charlie@example.com',
     )
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--format',
@@ -279,9 +271,9 @@ describe('contact list', () => {
     expect(contacts).toHaveLength(3)
   })
 
-  test('filter by tag', () => {
+  test('filter by tag', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -291,9 +283,9 @@ describe('contact list', () => {
       '--tag',
       'vip',
     )
-    ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@example.com')
+    await ctx.runOK('contact', 'add', '--name', 'Bob', '--email', 'bob@example.com')
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--tag',
@@ -304,9 +296,9 @@ describe('contact list', () => {
     expect(contacts).toHaveLength(1)
   })
 
-  test('filter by company', () => {
+  test('filter by company', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -316,7 +308,7 @@ describe('contact list', () => {
       '--company',
       'Acme',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -327,7 +319,7 @@ describe('contact list', () => {
       'Other',
     )
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--company',
@@ -338,13 +330,13 @@ describe('contact list', () => {
     expect(contacts).toHaveLength(1)
   })
 
-  test('sort by name', () => {
+  test('sort by name', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Charlie')
-    ctx.runOK('contact', 'add', '--name', 'Alice')
-    ctx.runOK('contact', 'add', '--name', 'Bob')
+    await ctx.runOK('contact', 'add', '--name', 'Charlie')
+    await ctx.runOK('contact', 'add', '--name', 'Alice')
+    await ctx.runOK('contact', 'add', '--name', 'Bob')
 
-    const contacts = ctx.runJSON<Array<{ name: string }>>(
+    const contacts = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--sort',
@@ -355,14 +347,14 @@ describe('contact list', () => {
     expect(contacts.map((c) => c.name)).toEqual(['Alice', 'Bob', 'Charlie'])
   })
 
-  test('limit and offset', () => {
+  test('limit and offset', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'A')
-    ctx.runOK('contact', 'add', '--name', 'B')
-    ctx.runOK('contact', 'add', '--name', 'C')
-    ctx.runOK('contact', 'add', '--name', 'D')
+    await ctx.runOK('contact', 'add', '--name', 'A')
+    await ctx.runOK('contact', 'add', '--name', 'B')
+    await ctx.runOK('contact', 'add', '--name', 'C')
+    await ctx.runOK('contact', 'add', '--name', 'D')
 
-    const page1 = ctx.runJSON<unknown[]>(
+    const page1 = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--limit',
@@ -372,7 +364,7 @@ describe('contact list', () => {
     )
     expect(page1).toHaveLength(2)
 
-    const page2 = ctx.runJSON<unknown[]>(
+    const page2 = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--limit',
@@ -385,12 +377,12 @@ describe('contact list', () => {
     expect(page2).toHaveLength(2)
   })
 
-  test('format ids outputs one ID per line', () => {
+  test('format ids outputs one ID per line', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Alice')
-    ctx.runOK('contact', 'add', '--name', 'Bob')
+    await ctx.runOK('contact', 'add', '--name', 'Alice')
+    await ctx.runOK('contact', 'add', '--name', 'Bob')
 
-    const out = ctx.runOK('contact', 'list', '--format', 'ids')
+    const out = await ctx.runOK('contact', 'list', '--format', 'ids')
     const lines = out.trim().split('\n')
     expect(lines).toHaveLength(2)
     for (const line of lines) {
@@ -398,9 +390,9 @@ describe('contact list', () => {
     }
   })
 
-  test('format csv has header and data rows', () => {
+  test('format csv has header and data rows', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -409,7 +401,7 @@ describe('contact list', () => {
       'alice@example.com',
     )
 
-    const out = ctx.runOK('contact', 'list', '--format', 'csv')
+    const out = await ctx.runOK('contact', 'list', '--format', 'csv')
     const lines = out.trim().split('\n')
     expect(lines.length).toBeGreaterThanOrEqual(2)
     expect(lines[0]).toContain('name')
@@ -418,20 +410,20 @@ describe('contact list', () => {
     expect(lines[1]).toContain('alice@example.com')
   })
 
-  test('format tsv has tab-separated columns', () => {
+  test('format tsv has tab-separated columns', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Alice', '--email', 'alice@co.com')
+    await ctx.runOK('contact', 'add', '--name', 'Alice', '--email', 'alice@co.com')
 
-    const out = ctx.runOK('contact', 'list', '--format', 'tsv')
+    const out = await ctx.runOK('contact', 'list', '--format', 'tsv')
     const lines = out.trim().split('\n')
     expect(lines.length).toBeGreaterThanOrEqual(2)
     expect(lines[0]).toContain('\t')
     expect(lines[1]).toContain('Alice')
   })
 
-  test('filter expression on custom fields', () => {
+  test('filter expression on custom fields', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -441,7 +433,7 @@ describe('contact list', () => {
       '--set',
       'source=conference',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -451,7 +443,7 @@ describe('contact list', () => {
       '--set',
       'source=inbound',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -462,7 +454,7 @@ describe('contact list', () => {
       'source=inbound',
     )
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--filter',
@@ -473,13 +465,13 @@ describe('contact list', () => {
     expect(contacts).toHaveLength(1)
   })
 
-  test('filter with != operator', () => {
+  test('filter with != operator', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Alice', '--set', 'role=CTO')
-    ctx.runOK('contact', 'add', '--name', 'Bob', '--set', 'role=Engineer')
-    ctx.runOK('contact', 'add', '--name', 'Charlie', '--set', 'role=CTO')
+    await ctx.runOK('contact', 'add', '--name', 'Alice', '--set', 'role=CTO')
+    await ctx.runOK('contact', 'add', '--name', 'Bob', '--set', 'role=Engineer')
+    await ctx.runOK('contact', 'add', '--name', 'Charlie', '--set', 'role=CTO')
 
-    const contacts = ctx.runJSON<Array<{ name: string }>>(
+    const contacts = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--filter',
@@ -491,13 +483,13 @@ describe('contact list', () => {
     expect(contacts[0].name).toBe('Bob')
   })
 
-  test('filter with ~= substring match (case-insensitive)', () => {
+  test('filter with ~= substring match (case-insensitive)', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Alice Smith')
-    ctx.runOK('contact', 'add', '--name', 'Bob Jones')
-    ctx.runOK('contact', 'add', '--name', 'Charlie Smithson')
+    await ctx.runOK('contact', 'add', '--name', 'Alice Smith')
+    await ctx.runOK('contact', 'add', '--name', 'Bob Jones')
+    await ctx.runOK('contact', 'add', '--name', 'Charlie Smithson')
 
-    const contacts = ctx.runJSON<Array<{ name: string }>>(
+    const contacts = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--filter',
@@ -508,13 +500,13 @@ describe('contact list', () => {
     expect(contacts).toHaveLength(2)
   })
 
-  test('filter with > numeric comparison', () => {
+  test('filter with > numeric comparison', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Small', '--set', 'score=10')
-    ctx.runOK('contact', 'add', '--name', 'Medium', '--set', 'score=50')
-    ctx.runOK('contact', 'add', '--name', 'Big', '--set', 'score=90')
+    await ctx.runOK('contact', 'add', '--name', 'Small', '--set', 'score=10')
+    await ctx.runOK('contact', 'add', '--name', 'Medium', '--set', 'score=50')
+    await ctx.runOK('contact', 'add', '--name', 'Big', '--set', 'score=90')
 
-    const contacts = ctx.runJSON<Array<{ name: string }>>(
+    const contacts = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--filter',
@@ -525,12 +517,12 @@ describe('contact list', () => {
     expect(contacts).toHaveLength(2)
   })
 
-  test('filter with < numeric comparison', () => {
+  test('filter with < numeric comparison', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Small', '--set', 'score=10')
-    ctx.runOK('contact', 'add', '--name', 'Big', '--set', 'score=90')
+    await ctx.runOK('contact', 'add', '--name', 'Small', '--set', 'score=10')
+    await ctx.runOK('contact', 'add', '--name', 'Big', '--set', 'score=90')
 
-    const contacts = ctx.runJSON<Array<{ name: string }>>(
+    const contacts = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--filter',
@@ -542,13 +534,13 @@ describe('contact list', () => {
     expect(contacts[0].name).toBe('Small')
   })
 
-  test('filter with OR logic', () => {
+  test('filter with OR logic', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Alice', '--set', 'role=CTO')
-    ctx.runOK('contact', 'add', '--name', 'Bob', '--set', 'role=CEO')
-    ctx.runOK('contact', 'add', '--name', 'Charlie', '--set', 'role=Engineer')
+    await ctx.runOK('contact', 'add', '--name', 'Alice', '--set', 'role=CTO')
+    await ctx.runOK('contact', 'add', '--name', 'Bob', '--set', 'role=CEO')
+    await ctx.runOK('contact', 'add', '--name', 'Charlie', '--set', 'role=Engineer')
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--filter',
@@ -559,11 +551,11 @@ describe('contact list', () => {
     expect(contacts).toHaveLength(2)
   })
 
-  test('filter on non-existent field returns nothing', () => {
+  test('filter on non-existent field returns nothing', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Alice')
+    await ctx.runOK('contact', 'add', '--name', 'Alice')
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--filter',
@@ -574,11 +566,11 @@ describe('contact list', () => {
     expect(contacts).toHaveLength(0)
   })
 
-  test('!= on missing field matches (null != X is true)', () => {
+  test('!= on missing field matches (null != X is true)', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Alice')
+    await ctx.runOK('contact', 'add', '--name', 'Alice')
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--filter',
@@ -590,10 +582,10 @@ describe('contact list', () => {
   })
 })
 
-describe('email validation', () => {
-  test('rejects email without @', () => {
+describe('email validation', async () => {
+  test('rejects email without @', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -604,9 +596,9 @@ describe('email validation', () => {
     expect(result.stderr).toContain('invalid email')
   })
 
-  test('rejects email starting with @', () => {
+  test('rejects email starting with @', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -617,9 +609,9 @@ describe('email validation', () => {
     expect(result.stderr).toContain('invalid email')
   })
 
-  test('rejects email ending with @', () => {
+  test('rejects email ending with @', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -630,10 +622,10 @@ describe('email validation', () => {
     expect(result.stderr).toContain('invalid email')
   })
 
-  test('edit rejects invalid email', () => {
+  test('edit rejects invalid email', async () => {
     const ctx = createTestContext()
-    const id = ctx.runOK('contact', 'add', '--name', 'Jane').trim()
-    const result = ctx.runFail(
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane')).trim()
+    const result = await ctx.runFail(
       'contact',
       'edit',
       id,
@@ -644,20 +636,18 @@ describe('email validation', () => {
   })
 })
 
-describe('input trimming', () => {
-  test('trims whitespace from name', () => {
+describe('input trimming', async () => {
+  test('trims whitespace from name', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
         '  Jane Doe  ',
         '--email',
         'jane@acme.com',
-      )
-      .trim()
-    const data = ctx.runJSON<{ name: string }>(
+      )).trim()
+    const data = await ctx.runJSON<{ name: string }>(
       'contact',
       'show',
       id,
@@ -667,12 +657,10 @@ describe('input trimming', () => {
     expect(data.name).toBe('Jane Doe')
   })
 
-  test('trims whitespace from email', () => {
+  test('trims whitespace from email', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--email', '  jane@acme.com  ')
-      .trim()
-    const data = ctx.runJSON<{ emails: string[] }>(
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', '  jane@acme.com  ')).trim()
+    const data = await ctx.runJSON<{ emails: string[] }>(
       'contact',
       'show',
       id,
@@ -682,12 +670,10 @@ describe('input trimming', () => {
     expect(data.emails[0]).toBe('jane@acme.com')
   })
 
-  test('trims whitespace from tags', () => {
+  test('trims whitespace from tags', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--tag', '  vip  ')
-      .trim()
-    const data = ctx.runJSON<{ tags: string[] }>(
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--tag', '  vip  ')).trim()
+    const data = await ctx.runJSON<{ tags: string[] }>(
       'contact',
       'show',
       id,
@@ -698,11 +684,10 @@ describe('input trimming', () => {
   })
 })
 
-describe('contact edit', () => {
-  test('update fields by ID', () => {
+describe('contact edit', async () => {
+  test('update fields by ID', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -711,9 +696,8 @@ describe('contact edit', () => {
         'jane@acme.com',
         '--set',
         'title=Engineer',
-      )
-      .trim()
-    ctx.runOK(
+      )).trim()
+    await ctx.runOK(
       'contact',
       'edit',
       id,
@@ -723,15 +707,15 @@ describe('contact edit', () => {
       'title=CTO',
     )
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('Jane Smith')
     expect(show).toContain('CTO')
     expect(show).not.toContain('Jane Doe')
   })
 
-  test('update by email', () => {
+  test('update by email', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -739,29 +723,26 @@ describe('contact edit', () => {
       '--email',
       'jane@acme.com',
     )
-    ctx.runOK('contact', 'edit', 'jane@acme.com', '--set', 'title=CEO')
+    await ctx.runOK('contact', 'edit', 'jane@acme.com', '--set', 'title=CEO')
 
-    const show = ctx.runOK('contact', 'show', 'jane@acme.com')
+    const show = await ctx.runOK('contact', 'show', 'jane@acme.com')
     expect(show).toContain('CEO')
   })
 
-  test('set and unset custom fields', () => {
+  test('set and unset custom fields', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--set', 'github=janedoe')
-      .trim()
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--set', 'github=janedoe')).trim()
 
-    ctx.runOK('contact', 'edit', id, '--set', 'github=janesmith')
-    expect(ctx.runOK('contact', 'show', id)).toContain('janesmith')
+    await ctx.runOK('contact', 'edit', id, '--set', 'github=janesmith')
+    expect(await ctx.runOK('contact', 'show', id)).toContain('janesmith')
 
-    ctx.runOK('contact', 'edit', id, '--unset', 'github')
-    expect(ctx.runOK('contact', 'show', id)).not.toContain('github')
+    await ctx.runOK('contact', 'edit', id, '--unset', 'github')
+    expect(await ctx.runOK('contact', 'show', id)).not.toContain('github')
   })
 
-  test('json: prefix stores parsed JSON values', () => {
+  test('json: prefix stores parsed JSON values', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -770,10 +751,9 @@ describe('contact edit', () => {
         'json:score=85',
         '--set',
         'json:tags=["a","b"]',
-      )
-      .trim()
+      )).trim()
 
-    const data = ctx.runJSON<{ custom_fields: Record<string, unknown> }>(
+    const data = await ctx.runJSON<{ custom_fields: Record<string, unknown> }>(
       'contact',
       'show',
       id,
@@ -784,10 +764,9 @@ describe('contact edit', () => {
     expect(data.custom_fields.tags).toEqual(['a', 'b'])
   })
 
-  test('unset removes json: custom field', () => {
+  test('unset removes json: custom field', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -796,11 +775,10 @@ describe('contact edit', () => {
         'json:score=85',
         '--set',
         'json:tags=["a","b"]',
-      )
-      .trim()
-    ctx.runOK('contact', 'edit', id, '--unset', 'score')
+      )).trim()
+    await ctx.runOK('contact', 'edit', id, '--unset', 'score')
 
-    const data = ctx.runJSON<{ custom_fields: Record<string, unknown> }>(
+    const data = await ctx.runJSON<{ custom_fields: Record<string, unknown> }>(
       'contact',
       'show',
       id,
@@ -811,9 +789,9 @@ describe('contact edit', () => {
     expect(data.custom_fields.tags).toEqual(['a', 'b'])
   })
 
-  test('json: prefix with invalid JSON fails', () => {
+  test('json: prefix with invalid JSON fails', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -824,34 +802,29 @@ describe('contact edit', () => {
     expect(result.stderr).toContain('invalid JSON')
   })
 
-  test('add and remove tags', () => {
+  test('add and remove tags', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--tag', 'lead')
-      .trim()
-    ctx.runOK('contact', 'edit', id, '--add-tag', 'vip', '--rm-tag', 'lead')
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--tag', 'lead')).trim()
+    await ctx.runOK('contact', 'edit', id, '--add-tag', 'vip', '--rm-tag', 'lead')
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('vip')
     expect(show).not.toContain('lead')
   })
 
-  test('add email to existing contact', () => {
+  test('add email to existing contact', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-      .trim()
-    ctx.runOK('contact', 'edit', id, '--add-email', 'jane.doe@gmail.com')
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')).trim()
+    await ctx.runOK('contact', 'edit', id, '--add-email', 'jane.doe@gmail.com')
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('jane@acme.com')
     expect(show).toContain('jane.doe@gmail.com')
   })
 
-  test('remove email from contact', () => {
+  test('remove email from contact', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -860,31 +833,27 @@ describe('contact edit', () => {
         'jane@acme.com',
         '--email',
         'old@acme.com',
-      )
-      .trim()
-    ctx.runOK('contact', 'edit', id, '--rm-email', 'old@acme.com')
+      )).trim()
+    await ctx.runOK('contact', 'edit', id, '--rm-email', 'old@acme.com')
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('jane@acme.com')
     expect(show).not.toContain('old@acme.com')
   })
 
-  test('add phone to existing contact', () => {
+  test('add phone to existing contact', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
-      .trim()
-    ctx.runOK('contact', 'edit', id, '--add-phone', '+44-20-7946-0958')
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')).trim()
+    await ctx.runOK('contact', 'edit', id, '--add-phone', '+44-20-7946-0958')
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('(212) 555-1234')
     expect(show).toContain('+44 20 7946 0958')
   })
 
-  test('remove phone from contact', () => {
+  test('remove phone from contact', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -893,31 +862,27 @@ describe('contact edit', () => {
         '+1-212-555-1234',
         '--phone',
         '+1-310-555-9876',
-      )
-      .trim()
-    ctx.runOK('contact', 'edit', id, '--rm-phone', '+1-310-555-9876')
+      )).trim()
+    await ctx.runOK('contact', 'edit', id, '--rm-phone', '+1-310-555-9876')
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('(212) 555-1234')
     expect(show).not.toContain('(310) 555-9876')
   })
 
-  test('add company to existing contact', () => {
+  test('add company to existing contact', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--company', 'Acme Corp')
-      .trim()
-    ctx.runOK('contact', 'edit', id, '--add-company', 'Globex')
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--company', 'Acme Corp')).trim()
+    await ctx.runOK('contact', 'edit', id, '--add-company', 'Globex')
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('Acme Corp')
     expect(show).toContain('Globex')
   })
 
-  test('remove company from contact', () => {
+  test('remove company from contact', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -926,53 +891,50 @@ describe('contact edit', () => {
         'Acme Corp',
         '--company',
         'Old Corp',
-      )
-      .trim()
-    ctx.runOK('contact', 'edit', id, '--rm-company', 'Old Corp')
+      )).trim()
+    await ctx.runOK('contact', 'edit', id, '--rm-company', 'Old Corp')
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('Acme Corp')
     expect(show).not.toContain('Old Corp')
   })
 })
 
-describe('contact rm', () => {
-  test('delete by ID', () => {
+describe('contact rm', async () => {
+  test('delete by ID', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-      .trim()
-    ctx.runOK('contact', 'rm', id, '--force')
-    ctx.runFail('contact', 'show', id)
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')).trim()
+    await ctx.runOK('contact', 'rm', id, '--force')
+    await ctx.runFail('contact', 'show', id)
   })
 
-  test('delete by email', () => {
+  test('delete by email', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('contact', 'rm', 'jane@acme.com', '--force')
-    ctx.runFail('contact', 'show', 'jane@acme.com')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('contact', 'rm', 'jane@acme.com', '--force')
+    await ctx.runFail('contact', 'show', 'jane@acme.com')
   })
 })
 
-describe('contact phone normalization', () => {
-  test('various formats normalize to same E.164', () => {
+describe('contact phone normalization', async () => {
+  test('various formats normalize to same E.164', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
 
     // All these formats should find the same contact
-    const show1 = ctx.runOK('contact', 'show', '+12125551234')
-    const show2 = ctx.runOK('contact', 'show', '+1-212-555-1234')
-    const show3 = ctx.runOK('contact', 'show', '(212) 555-1234') // requires default_country=US
+    const show1 = await ctx.runOK('contact', 'show', '+12125551234')
+    const show2 = await ctx.runOK('contact', 'show', '+1-212-555-1234')
+    const show3 = await ctx.runOK('contact', 'show', '(212) 555-1234') // requires default_country=US
     expect(show1).toContain('Jane')
     expect(show2).toContain('Jane')
     expect(show3).toContain('Jane')
   })
 
-  test('phones stored as E.164 in JSON output', () => {
+  test('phones stored as E.164 in JSON output', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
 
-    const contacts = ctx.runJSON<Array<{ phones: string[] }>>(
+    const contacts = await ctx.runJSON<Array<{ phones: string[] }>>(
       'contact',
       'list',
       '--format',
@@ -981,30 +943,30 @@ describe('contact phone normalization', () => {
     expect(contacts[0].phones[0]).toBe('+12125551234')
   })
 
-  test('display format is national by default', () => {
+  test('display format is national by default', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+12125551234')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+12125551234')
 
-    const show = ctx.runOK('contact', 'show', '+12125551234')
+    const show = await ctx.runOK('contact', 'show', '+12125551234')
     expect(show).toContain('(212) 555-1234')
   })
 
-  test('foreign numbers show international format even in national mode', () => {
+  test('foreign numbers show international format even in national mode', async () => {
     const ctx = createTestContext()
     // default_country is US in test config — a UK number should show with +44
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+442079460958')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+442079460958')
 
-    const show = ctx.runOK('contact', 'show', '+442079460958')
+    const show = await ctx.runOK('contact', 'show', '+442079460958')
     expect(show).toContain('+44 20 7946 0958')
     expect(show).not.toContain('020 7946 0958')
   })
 
-  test('duplicate detection across formats', () => {
+  test('duplicate detection across formats', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
 
     // Same number in different format — should fail as duplicate
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -1015,9 +977,9 @@ describe('contact phone normalization', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('invalid phone number rejected', () => {
+  test('invalid phone number rejected', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -1028,9 +990,9 @@ describe('contact phone normalization', () => {
     expect(result.stderr).toContain('invalid')
   })
 
-  test('too-short phone number rejected', () => {
+  test('too-short phone number rejected', async () => {
     const ctx = createTestContext()
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -1041,10 +1003,10 @@ describe('contact phone normalization', () => {
     expect(result.stderr).toContain('invalid')
   })
 
-  test('national format uses default_country from config', () => {
+  test('national format uses default_country from config', async () => {
     const ctx = createTestContext()
     // With default_country=US in config, a national number should normalize to +1
-    ctx.runWithEnv(
+    await ctx.runWithEnv(
       { CRM_PHONE_DEFAULT_COUNTRY: 'US' },
       'contact',
       'add',
@@ -1054,7 +1016,7 @@ describe('contact phone normalization', () => {
       '(212) 555-1234',
     )
 
-    const contacts = ctx.runJSON<Array<{ phones: string[] }>>(
+    const contacts = await ctx.runJSON<Array<{ phones: string[] }>>(
       'contact',
       'list',
       '--format',
@@ -1063,10 +1025,10 @@ describe('contact phone normalization', () => {
     expect(contacts[0].phones[0]).toBe('+12125551234')
   })
 
-  test('bare digits with default_country set normalizes to E.164', () => {
+  test('bare digits with default_country set normalizes to E.164', async () => {
     const ctx = createTestContext()
     // With default_country=US, bare digits (no + prefix, no formatting) should work
-    ctx.runWithEnv(
+    await ctx.runWithEnv(
       { CRM_PHONE_DEFAULT_COUNTRY: 'US' },
       'contact',
       'add',
@@ -1076,7 +1038,7 @@ describe('contact phone normalization', () => {
       '2125551234',
     )
 
-    const contacts = ctx.runJSON<Array<{ phones: string[] }>>(
+    const contacts = await ctx.runJSON<Array<{ phones: string[] }>>(
       'contact',
       'list',
       '--format',
@@ -1085,10 +1047,9 @@ describe('contact phone normalization', () => {
     expect(contacts[0].phones[0]).toBe('+12125551234')
   })
 
-  test('rm-phone matches across formats', () => {
+  test('rm-phone matches across formats', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -1097,13 +1058,12 @@ describe('contact phone normalization', () => {
         '+1-212-555-1234',
         '--phone',
         '+44-20-7946-0958',
-      )
-      .trim()
+      )).trim()
 
     // Remove using a different format than how it was added
-    ctx.runOK('contact', 'edit', id, '--rm-phone', '(212) 555-1234')
+    await ctx.runOK('contact', 'edit', id, '--rm-phone', '(212) 555-1234')
 
-    const contacts = ctx.runJSON<Array<{ phones: string[] }>>(
+    const contacts = await ctx.runJSON<Array<{ phones: string[] }>>(
       'contact',
       'list',
       '--format',
@@ -1113,16 +1073,14 @@ describe('contact phone normalization', () => {
     expect(contacts[0].phones[0]).toBe('+442079460958')
   })
 
-  test('add-phone silently skips duplicate in different format', () => {
+  test('add-phone silently skips duplicate in different format', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
-      .trim()
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')).trim()
 
     // Same number in national format — should not create a second entry
-    ctx.runOK('contact', 'edit', id, '--add-phone', '(212) 555-1234')
+    await ctx.runOK('contact', 'edit', id, '--add-phone', '(212) 555-1234')
 
-    const data = ctx.runJSON<{ phones: string[] }>(
+    const data = await ctx.runJSON<{ phones: string[] }>(
       'contact',
       'show',
       id,
@@ -1133,11 +1091,11 @@ describe('contact phone normalization', () => {
     expect(data.phones[0]).toBe('+12125551234')
   })
 
-  test('UK number normalization', () => {
+  test('UK number normalization', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+44 20 7946 0958')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+44 20 7946 0958')
 
-    const contacts = ctx.runJSON<Array<{ phones: string[] }>>(
+    const contacts = await ctx.runJSON<Array<{ phones: string[] }>>(
       'contact',
       'list',
       '--format',
@@ -1146,15 +1104,15 @@ describe('contact phone normalization', () => {
     expect(contacts[0].phones[0]).toBe('+442079460958')
 
     // Lookup with different format
-    const show = ctx.runOK('contact', 'show', '+44-20-7946-0958')
+    const show = await ctx.runOK('contact', 'show', '+44-20-7946-0958')
     expect(show).toContain('Jane')
   })
 
-  test('JSON export uses E.164 format', () => {
+  test('JSON export uses E.164 format', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
 
-    const contacts = ctx.runJSON<Array<{ phones: string[] }>>(
+    const contacts = await ctx.runJSON<Array<{ phones: string[] }>>(
       'contact',
       'list',
       '--format',
@@ -1164,11 +1122,10 @@ describe('contact phone normalization', () => {
   })
 })
 
-describe('contact social handles', () => {
-  test('add with social handles', () => {
+describe('contact social handles', async () => {
+  test('add with social handles', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -1181,17 +1138,16 @@ describe('contact social handles', () => {
         'janedoe.bsky.social',
         '--telegram',
         'janedoe',
-      )
-      .trim()
+      )).trim()
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('janedoe')
     expect(show).toContain('janedoe.bsky.social')
   })
 
-  test('URL input extracts handle for LinkedIn', () => {
+  test('URL input extracts handle for LinkedIn', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1200,7 +1156,7 @@ describe('contact social handles', () => {
       'https://linkedin.com/in/janedoe',
     )
 
-    const contacts = ctx.runJSON<Array<{ linkedin: string }>>(
+    const contacts = await ctx.runJSON<Array<{ linkedin: string }>>(
       'contact',
       'list',
       '--format',
@@ -1209,9 +1165,9 @@ describe('contact social handles', () => {
     expect(contacts[0].linkedin).toBe('janedoe')
   })
 
-  test('URL input extracts handle for X', () => {
+  test('URL input extracts handle for X', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1220,7 +1176,7 @@ describe('contact social handles', () => {
       'https://x.com/janedoe',
     )
 
-    const contacts = ctx.runJSON<Array<{ x: string }>>(
+    const contacts = await ctx.runJSON<Array<{ x: string }>>(
       'contact',
       'list',
       '--format',
@@ -1229,9 +1185,9 @@ describe('contact social handles', () => {
     expect(contacts[0].x).toBe('janedoe')
   })
 
-  test('URL input extracts handle for Bluesky', () => {
+  test('URL input extracts handle for Bluesky', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1240,7 +1196,7 @@ describe('contact social handles', () => {
       'https://bsky.app/profile/janedoe.bsky.social',
     )
 
-    const contacts = ctx.runJSON<Array<{ bluesky: string }>>(
+    const contacts = await ctx.runJSON<Array<{ bluesky: string }>>(
       'contact',
       'list',
       '--format',
@@ -1249,9 +1205,9 @@ describe('contact social handles', () => {
     expect(contacts[0].bluesky).toBe('janedoe.bsky.social')
   })
 
-  test('URL input extracts handle for Telegram', () => {
+  test('URL input extracts handle for Telegram', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1260,7 +1216,7 @@ describe('contact social handles', () => {
       'https://t.me/janedoe',
     )
 
-    const contacts = ctx.runJSON<Array<{ telegram: string }>>(
+    const contacts = await ctx.runJSON<Array<{ telegram: string }>>(
       'contact',
       'list',
       '--format',
@@ -1269,9 +1225,9 @@ describe('contact social handles', () => {
     expect(contacts[0].telegram).toBe('janedoe')
   })
 
-  test('LinkedIn URL without protocol', () => {
+  test('LinkedIn URL without protocol', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1280,7 +1236,7 @@ describe('contact social handles', () => {
       'linkedin.com/in/janedoe',
     )
 
-    const contacts = ctx.runJSON<Array<{ linkedin: string }>>(
+    const contacts = await ctx.runJSON<Array<{ linkedin: string }>>(
       'contact',
       'list',
       '--format',
@@ -1289,9 +1245,9 @@ describe('contact social handles', () => {
     expect(contacts[0].linkedin).toBe('janedoe')
   })
 
-  test('LinkedIn URL with www', () => {
+  test('LinkedIn URL with www', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1300,7 +1256,7 @@ describe('contact social handles', () => {
       'www.linkedin.com/in/janedoe',
     )
 
-    const contacts = ctx.runJSON<Array<{ linkedin: string }>>(
+    const contacts = await ctx.runJSON<Array<{ linkedin: string }>>(
       'contact',
       'list',
       '--format',
@@ -1309,9 +1265,9 @@ describe('contact social handles', () => {
     expect(contacts[0].linkedin).toBe('janedoe')
   })
 
-  test('LinkedIn URL with http instead of https', () => {
+  test('LinkedIn URL with http instead of https', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1320,7 +1276,7 @@ describe('contact social handles', () => {
       'http://linkedin.com/in/janedoe',
     )
 
-    const contacts = ctx.runJSON<Array<{ linkedin: string }>>(
+    const contacts = await ctx.runJSON<Array<{ linkedin: string }>>(
       'contact',
       'list',
       '--format',
@@ -1329,9 +1285,9 @@ describe('contact social handles', () => {
     expect(contacts[0].linkedin).toBe('janedoe')
   })
 
-  test('LinkedIn URL with trailing slash', () => {
+  test('LinkedIn URL with trailing slash', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1340,7 +1296,7 @@ describe('contact social handles', () => {
       'linkedin.com/in/janedoe/',
     )
 
-    const contacts = ctx.runJSON<Array<{ linkedin: string }>>(
+    const contacts = await ctx.runJSON<Array<{ linkedin: string }>>(
       'contact',
       'list',
       '--format',
@@ -1349,11 +1305,11 @@ describe('contact social handles', () => {
     expect(contacts[0].linkedin).toBe('janedoe')
   })
 
-  test('X URL without protocol', () => {
+  test('X URL without protocol', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--x', 'x.com/janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--x', 'x.com/janedoe')
 
-    const contacts = ctx.runJSON<Array<{ x: string }>>(
+    const contacts = await ctx.runJSON<Array<{ x: string }>>(
       'contact',
       'list',
       '--format',
@@ -1362,9 +1318,9 @@ describe('contact social handles', () => {
     expect(contacts[0].x).toBe('janedoe')
   })
 
-  test('X via twitter.com domain', () => {
+  test('X via twitter.com domain', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1373,7 +1329,7 @@ describe('contact social handles', () => {
       'twitter.com/janedoe',
     )
 
-    const contacts = ctx.runJSON<Array<{ x: string }>>(
+    const contacts = await ctx.runJSON<Array<{ x: string }>>(
       'contact',
       'list',
       '--format',
@@ -1382,9 +1338,9 @@ describe('contact social handles', () => {
     expect(contacts[0].x).toBe('janedoe')
   })
 
-  test('X via twitter.com with https', () => {
+  test('X via twitter.com with https', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1393,7 +1349,7 @@ describe('contact social handles', () => {
       'https://twitter.com/janedoe',
     )
 
-    const contacts = ctx.runJSON<Array<{ x: string }>>(
+    const contacts = await ctx.runJSON<Array<{ x: string }>>(
       'contact',
       'list',
       '--format',
@@ -1402,11 +1358,11 @@ describe('contact social handles', () => {
     expect(contacts[0].x).toBe('janedoe')
   })
 
-  test('X handle with @ prefix', () => {
+  test('X handle with @ prefix', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--x', '@janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--x', '@janedoe')
 
-    const contacts = ctx.runJSON<Array<{ x: string }>>(
+    const contacts = await ctx.runJSON<Array<{ x: string }>>(
       'contact',
       'list',
       '--format',
@@ -1415,9 +1371,9 @@ describe('contact social handles', () => {
     expect(contacts[0].x).toBe('janedoe')
   })
 
-  test('Bluesky URL without protocol', () => {
+  test('Bluesky URL without protocol', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1426,7 +1382,7 @@ describe('contact social handles', () => {
       'bsky.app/profile/janedoe.bsky.social',
     )
 
-    const contacts = ctx.runJSON<Array<{ bluesky: string }>>(
+    const contacts = await ctx.runJSON<Array<{ bluesky: string }>>(
       'contact',
       'list',
       '--format',
@@ -1435,9 +1391,9 @@ describe('contact social handles', () => {
     expect(contacts[0].bluesky).toBe('janedoe.bsky.social')
   })
 
-  test('Bluesky handle with @ prefix', () => {
+  test('Bluesky handle with @ prefix', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1446,7 +1402,7 @@ describe('contact social handles', () => {
       '@janedoe.bsky.social',
     )
 
-    const contacts = ctx.runJSON<Array<{ bluesky: string }>>(
+    const contacts = await ctx.runJSON<Array<{ bluesky: string }>>(
       'contact',
       'list',
       '--format',
@@ -1455,9 +1411,9 @@ describe('contact social handles', () => {
     expect(contacts[0].bluesky).toBe('janedoe.bsky.social')
   })
 
-  test('Telegram URL without protocol', () => {
+  test('Telegram URL without protocol', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1466,7 +1422,7 @@ describe('contact social handles', () => {
       't.me/janedoe',
     )
 
-    const contacts = ctx.runJSON<Array<{ telegram: string }>>(
+    const contacts = await ctx.runJSON<Array<{ telegram: string }>>(
       'contact',
       'list',
       '--format',
@@ -1475,11 +1431,11 @@ describe('contact social handles', () => {
     expect(contacts[0].telegram).toBe('janedoe')
   })
 
-  test('Telegram handle with @ prefix', () => {
+  test('Telegram handle with @ prefix', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--telegram', '@janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--telegram', '@janedoe')
 
-    const contacts = ctx.runJSON<Array<{ telegram: string }>>(
+    const contacts = await ctx.runJSON<Array<{ telegram: string }>>(
       'contact',
       'list',
       '--format',
@@ -1488,12 +1444,12 @@ describe('contact social handles', () => {
     expect(contacts[0].telegram).toBe('janedoe')
   })
 
-  test('duplicate detected across URL formats without protocol', () => {
+  test('duplicate detected across URL formats without protocol', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--x', 'janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--x', 'janedoe')
 
     // Same handle via bare URL — should reject
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -1504,11 +1460,11 @@ describe('contact social handles', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('duplicate detected via legacy twitter.com domain', () => {
+  test('duplicate detected via legacy twitter.com domain', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--x', 'janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--x', 'janedoe')
 
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -1519,11 +1475,11 @@ describe('contact social handles', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('duplicate detected via @ prefix', () => {
+  test('duplicate detected via @ prefix', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--telegram', 'janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--telegram', 'janedoe')
 
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -1534,44 +1490,44 @@ describe('contact social handles', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('lookup by URL without protocol', () => {
+  test('lookup by URL without protocol', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--x', 'janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--x', 'janedoe')
 
-    const show = ctx.runOK('contact', 'show', 'x.com/janedoe')
+    const show = await ctx.runOK('contact', 'show', 'x.com/janedoe')
     expect(show).toContain('Jane Doe')
   })
 
-  test('lookup by @ prefix', () => {
+  test('lookup by @ prefix', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--telegram', 'janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--telegram', 'janedoe')
 
-    const show = ctx.runOK('contact', 'show', '@janedoe')
+    const show = await ctx.runOK('contact', 'show', '@janedoe')
     expect(show).toContain('Jane Doe')
   })
 
-  test('lookup by handle', () => {
+  test('lookup by handle', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--linkedin', 'janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--linkedin', 'janedoe')
 
-    const show = ctx.runOK('contact', 'show', 'janedoe')
+    const show = await ctx.runOK('contact', 'show', 'janedoe')
     expect(show).toContain('Jane Doe')
   })
 
-  test('lookup by URL extracts handle before matching', () => {
+  test('lookup by URL extracts handle before matching', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--linkedin', 'janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane Doe', '--linkedin', 'janedoe')
 
     // URL input is normalized to handle before lookup
-    const show = ctx.runOK('contact', 'show', 'linkedin.com/in/janedoe')
+    const show = await ctx.runOK('contact', 'show', 'linkedin.com/in/janedoe')
     expect(show).toContain('Jane Doe')
   })
 
-  test('duplicate LinkedIn handle rejected', () => {
+  test('duplicate LinkedIn handle rejected', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--linkedin', 'janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--linkedin', 'janedoe')
 
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -1582,12 +1538,12 @@ describe('contact social handles', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('duplicate via URL rejected when handle matches', () => {
+  test('duplicate via URL rejected when handle matches', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--linkedin', 'janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--linkedin', 'janedoe')
 
     // URL resolves to same handle — should be rejected
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -1598,11 +1554,11 @@ describe('contact social handles', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('duplicate X handle rejected', () => {
+  test('duplicate X handle rejected', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--x', 'janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--x', 'janedoe')
 
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -1613,9 +1569,9 @@ describe('contact social handles', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('duplicate Bluesky handle rejected', () => {
+  test('duplicate Bluesky handle rejected', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1624,7 +1580,7 @@ describe('contact social handles', () => {
       'janedoe.bsky.social',
     )
 
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -1635,11 +1591,11 @@ describe('contact social handles', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('duplicate Telegram handle rejected', () => {
+  test('duplicate Telegram handle rejected', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--telegram', 'janedoe')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--telegram', 'janedoe')
 
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'add',
       '--name',
@@ -1650,12 +1606,10 @@ describe('contact social handles', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('edit social handles', () => {
+  test('edit social handles', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--x', 'oldhandle')
-      .trim()
-    ctx.runOK(
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--x', 'oldhandle')).trim()
+    await ctx.runOK(
       'contact',
       'edit',
       id,
@@ -1665,16 +1619,16 @@ describe('contact social handles', () => {
       'janedoe',
     )
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).toContain('newhandle')
     expect(show).toContain('janedoe')
     expect(show).not.toContain('oldhandle')
   })
 
-  test('edit via URL input extracts handle', () => {
+  test('edit via URL input extracts handle', async () => {
     const ctx = createTestContext()
-    const id = ctx.runOK('contact', 'add', '--name', 'Jane').trim()
-    ctx.runOK(
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane')).trim()
+    await ctx.runOK(
       'contact',
       'edit',
       id,
@@ -1682,7 +1636,7 @@ describe('contact social handles', () => {
       'https://linkedin.com/in/janedoe',
     )
 
-    const contacts = ctx.runJSON<Array<{ linkedin: string }>>(
+    const contacts = await ctx.runJSON<Array<{ linkedin: string }>>(
       'contact',
       'list',
       '--format',
@@ -1691,20 +1645,18 @@ describe('contact social handles', () => {
     expect(contacts[0].linkedin).toBe('janedoe')
   })
 
-  test('unset social handle', () => {
+  test('unset social handle', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--linkedin', 'janedoe')
-      .trim()
-    ctx.runOK('contact', 'edit', id, '--unset', 'linkedin')
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--linkedin', 'janedoe')).trim()
+    await ctx.runOK('contact', 'edit', id, '--unset', 'linkedin')
 
-    const show = ctx.runOK('contact', 'show', id)
+    const show = await ctx.runOK('contact', 'show', id)
     expect(show).not.toContain('janedoe')
   })
 
-  test('social handles stored as handles in JSON output', () => {
+  test('social handles stored as handles in JSON output', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -1715,21 +1667,19 @@ describe('contact social handles', () => {
       'janedoe_x',
     )
 
-    const contacts = ctx.runJSON<
+    const contacts = await ctx.runJSON<
       Array<{ linkedin: string | null; x: string | null }>
     >('contact', 'list', '--format', 'json')
     expect(contacts[0].linkedin).toBe('janedoe')
     expect(contacts[0].x).toBe('janedoe_x')
   })
 
-  test('edit rejects duplicate social handle owned by another contact', () => {
+  test('edit rejects duplicate social handle owned by another contact', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--linkedin', 'janedoe')
-    const bobId = ctx
-      .runOK('contact', 'add', '--name', 'Bob', '--linkedin', 'bobsmith')
-      .trim()
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--linkedin', 'janedoe')
+    const bobId = (await ctx.runOK('contact', 'add', '--name', 'Bob', '--linkedin', 'bobsmith')).trim()
 
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'edit',
       bobId,
@@ -1739,22 +1689,19 @@ describe('contact social handles', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('edit allows setting same social handle on own contact', () => {
+  test('edit allows setting same social handle on own contact', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--linkedin', 'janedoe')
-      .trim()
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--linkedin', 'janedoe')).trim()
 
     // Re-setting the same handle on the same contact should succeed
-    ctx.runOK('contact', 'edit', id, '--linkedin', 'janedoe')
+    await ctx.runOK('contact', 'edit', id, '--linkedin', 'janedoe')
   })
 })
 
-describe('contact merge', () => {
-  test('merges two contacts keeping first', () => {
+describe('contact merge', async () => {
+  test('merges two contacts keeping first', async () => {
     const ctx = createTestContext()
-    const id1 = ctx
-      .runOK(
+    const id1 = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -1763,10 +1710,8 @@ describe('contact merge', () => {
         'jane@acme.com',
         '--tag',
         'vip',
-      )
-      .trim()
-    const id2 = ctx
-      .runOK(
+      )).trim()
+    const id2 = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -1775,39 +1720,34 @@ describe('contact merge', () => {
         'jane.doe@gmail.com',
         '--tag',
         'enterprise',
-      )
-      .trim()
+      )).trim()
 
-    ctx.runOK('contact', 'merge', id1, id2)
+    await ctx.runOK('contact', 'merge', id1, id2)
 
-    const show = ctx.runOK('contact', 'show', id1)
+    const show = await ctx.runOK('contact', 'show', id1)
     expect(show).toContain('jane@acme.com')
     expect(show).toContain('jane.doe@gmail.com')
     expect(show).toContain('vip')
     expect(show).toContain('enterprise')
 
-    ctx.runFail('contact', 'show', id2)
+    await ctx.runFail('contact', 'show', id2)
   })
 
-  test('merge combines phones', () => {
+  test('merge combines phones', async () => {
     const ctx = createTestContext()
-    const id1 = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
-      .trim()
-    const id2 = ctx
-      .runOK(
+    const id1 = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')).trim()
+    const id2 = (await ctx.runOK(
         'contact',
         'add',
         '--name',
         'J. Doe',
         '--phone',
         '+44-20-7946-0958',
-      )
-      .trim()
+      )).trim()
 
-    ctx.runOK('contact', 'merge', id1, id2)
+    await ctx.runOK('contact', 'merge', id1, id2)
 
-    const contacts = ctx.runJSON<Array<{ phones: string[] }>>(
+    const contacts = await ctx.runJSON<Array<{ phones: string[] }>>(
       'contact',
       'list',
       '--format',
@@ -1816,48 +1756,38 @@ describe('contact merge', () => {
     expect(contacts[0].phones).toHaveLength(2)
   })
 
-  test('merge relinks deals to surviving contact', () => {
+  test('merge relinks deals to surviving contact', async () => {
     const ctx = createTestContext()
-    const id1 = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-      .trim()
-    const id2 = ctx
-      .runOK(
+    const id1 = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')).trim()
+    const id2 = (await ctx.runOK(
         'contact',
         'add',
         '--name',
         'J. Doe',
         '--email',
         'jane.doe@gmail.com',
-      )
-      .trim()
-    const deal = ctx
-      .runOK('deal', 'add', '--title', 'Big Deal', '--contact', id2)
-      .trim()
+      )).trim()
+    const deal = (await ctx.runOK('deal', 'add', '--title', 'Big Deal', '--contact', id2)).trim()
 
-    ctx.runOK('contact', 'merge', id1, id2)
+    await ctx.runOK('contact', 'merge', id1, id2)
 
-    const dealShow = ctx.runOK('deal', 'show', deal)
+    const dealShow = await ctx.runOK('deal', 'show', deal)
     expect(dealShow).toContain(id1)
     expect(dealShow).not.toContain(id2)
   })
 
-  test('merge transfers activities to surviving contact', () => {
+  test('merge transfers activities to surviving contact', async () => {
     const ctx = createTestContext()
-    const id1 = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-      .trim()
-    const id2 = ctx
-      .runOK(
+    const id1 = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')).trim()
+    const id2 = (await ctx.runOK(
         'contact',
         'add',
         '--name',
         'J. Doe',
         '--email',
         'jane.doe@gmail.com',
-      )
-      .trim()
-    ctx.runOK(
+      )).trim()
+    await ctx.runOK(
       'log',
       'note',
       'Activity on the old record',
@@ -1865,9 +1795,9 @@ describe('contact merge', () => {
       'jane.doe@gmail.com',
     )
 
-    ctx.runOK('contact', 'merge', id1, id2)
+    await ctx.runOK('contact', 'merge', id1, id2)
 
-    const activities = ctx.runJSON<unknown[]>(
+    const activities = await ctx.runJSON<unknown[]>(
       'activity',
       'list',
       '--contact',
@@ -1878,10 +1808,9 @@ describe('contact merge', () => {
     expect(activities).toHaveLength(1)
   })
 
-  test('merge combines custom fields and social handles', () => {
+  test('merge combines custom fields and social handles', async () => {
     const ctx = createTestContext()
-    const id1 = ctx
-      .runOK(
+    const id1 = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -1890,10 +1819,8 @@ describe('contact merge', () => {
         'title=CTO',
         '--x',
         'janedoe',
-      )
-      .trim()
-    const id2 = ctx
-      .runOK(
+      )).trim()
+    const id2 = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -1902,24 +1829,22 @@ describe('contact merge', () => {
         'jdoe',
         '--set',
         'source=inbound',
-      )
-      .trim()
+      )).trim()
 
-    ctx.runOK('contact', 'merge', id1, id2)
+    await ctx.runOK('contact', 'merge', id1, id2)
 
-    const show = ctx.runOK('contact', 'show', id1)
+    const show = await ctx.runOK('contact', 'show', id1)
     expect(show).toContain('CTO')
     expect(show).toContain('janedoe')
     expect(show).toContain('jdoe')
     expect(show).toContain('inbound')
   })
 
-  test('merge combines company links', () => {
+  test('merge combines company links', async () => {
     const ctx = createTestContext()
-    ctx.runOK('company', 'add', '--name', 'Acme Corp', '--website', 'acme.com')
-    ctx.runOK('company', 'add', '--name', 'Globex', '--website', 'globex.com')
-    const id1 = ctx
-      .runOK(
+    await ctx.runOK('company', 'add', '--name', 'Acme Corp', '--website', 'acme.com')
+    await ctx.runOK('company', 'add', '--name', 'Globex', '--website', 'globex.com')
+    const id1 = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -1928,10 +1853,8 @@ describe('contact merge', () => {
         'jane@acme.com',
         '--company',
         'Acme Corp',
-      )
-      .trim()
-    const id2 = ctx
-      .runOK(
+      )).trim()
+    const id2 = (await ctx.runOK(
         'contact',
         'add',
         '--name',
@@ -1940,24 +1863,23 @@ describe('contact merge', () => {
         'jane.personal@gmail.com',
         '--company',
         'Globex',
-      )
-      .trim()
+      )).trim()
 
-    ctx.runOK('contact', 'merge', id1, id2)
+    await ctx.runOK('contact', 'merge', id1, id2)
 
-    const show = ctx.runOK('contact', 'show', id1)
+    const show = await ctx.runOK('contact', 'show', id1)
     expect(show).toContain('Acme Corp')
     expect(show).toContain('Globex')
   })
 })
 
-describe('contact list --reverse', () => {
-  test('reverses listing order', () => {
+describe('contact list --reverse', async () => {
+  test('reverses listing order', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Alice')
-    ctx.runOK('contact', 'add', '--name', 'Bob')
+    await ctx.runOK('contact', 'add', '--name', 'Alice')
+    await ctx.runOK('contact', 'add', '--name', 'Bob')
 
-    const normal = ctx.runJSON<{ name: string }[]>(
+    const normal = await ctx.runJSON<{ name: string }[]>(
       'contact',
       'list',
       '--sort',
@@ -1965,7 +1887,7 @@ describe('contact list --reverse', () => {
       '--format',
       'json',
     )
-    const reversed = ctx.runJSON<{ name: string }[]>(
+    const reversed = await ctx.runJSON<{ name: string }[]>(
       'contact',
       'list',
       '--sort',
@@ -1979,18 +1901,18 @@ describe('contact list --reverse', () => {
   })
 })
 
-describe('contact rm --force', () => {
-  test('rm without --force fails in non-interactive mode', () => {
+describe('contact rm --force', async () => {
+  test('rm without --force fails in non-interactive mode', async () => {
     const ctx = createTestContext()
-    const id = ctx.runOK('contact', 'add', '--name', 'Jane').trim()
-    const result = ctx.runFail('contact', 'rm', id)
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane')).trim()
+    const result = await ctx.runFail('contact', 'rm', id)
     expect(result.stderr).toContain('--force')
   })
 
-  test('rm with --force succeeds', () => {
+  test('rm with --force succeeds', async () => {
     const ctx = createTestContext()
-    const id = ctx.runOK('contact', 'add', '--name', 'Jane').trim()
-    ctx.runOK('contact', 'rm', id, '--force')
-    ctx.runFail('contact', 'show', id)
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane')).trim()
+    await ctx.runOK('contact', 'rm', id, '--force')
+    await ctx.runFail('contact', 'show', id)
   })
 })

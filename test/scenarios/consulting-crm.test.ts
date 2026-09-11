@@ -32,8 +32,8 @@ import { join } from 'node:path'
 
 import { createTestContext } from '../helpers'
 
-describe('scenario: solo consultant with custom pipeline and retainers', () => {
-  test('manage retainer clients, log interactions, track referrals', () => {
+describe('scenario: solo consultant with custom pipeline and retainers', async () => {
+  test('manage retainer clients, log interactions, track referrals', async () => {
     const ctx = createTestContext()
 
     // ── Custom pipeline config ──
@@ -51,7 +51,7 @@ default_country = "US"
     )
 
     // ── Set up clients ──
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'company',
@@ -65,7 +65,7 @@ default_country = "US"
       '--set',
       'size=500',
     )
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'company',
@@ -79,7 +79,7 @@ default_country = "US"
       '--set',
       'size=200',
     )
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'company',
@@ -94,7 +94,7 @@ default_country = "US"
       'size=150',
     )
 
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'contact',
@@ -114,7 +114,7 @@ default_country = "US"
       '--set',
       'title=COO',
     )
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'contact',
@@ -134,7 +134,7 @@ default_country = "US"
       '--set',
       'title=CFO',
     )
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'contact',
@@ -156,8 +156,7 @@ default_country = "US"
     )
 
     // ── Create retainer deals ──
-    const dealApex = ctx
-      .runOK(
+    const dealApex = (await ctx.runOK(
         '--config',
         configPath,
         'deal',
@@ -176,11 +175,9 @@ default_country = "US"
         'billing_rate=250/hr',
         '--set',
         'contract_months=6',
-      )
-      .trim()
+      )).trim()
 
-    const dealBright = ctx
-      .runOK(
+    const dealBright = (await ctx.runOK(
         '--config',
         configPath,
         'deal',
@@ -199,11 +196,9 @@ default_country = "US"
         'billing_rate=200/hr',
         '--set',
         'contract_months=3',
-      )
-      .trim()
+      )).trim()
 
-    const dealCore = ctx
-      .runOK(
+    const dealCore = (await ctx.runOK(
         '--config',
         configPath,
         'deal',
@@ -222,11 +217,10 @@ default_country = "US"
         'billing_rate=200/hr',
         '--set',
         'referral_source=Apex',
-      )
-      .trim()
+      )).trim()
 
     // ── Move deals through custom pipeline ──
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'deal',
@@ -237,7 +231,7 @@ default_country = "US"
       '--note',
       'Kickoff meeting scheduled',
     )
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'deal',
@@ -249,7 +243,7 @@ default_country = "US"
       'Contract signed, monthly retainer started',
     )
 
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'deal',
@@ -260,7 +254,7 @@ default_country = "US"
       '--note',
       'Robert approved the SOW',
     )
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'deal',
@@ -270,7 +264,7 @@ default_country = "US"
       'active-retainer',
     )
 
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'deal',
@@ -283,7 +277,7 @@ default_country = "US"
     )
 
     // ── Heavy activity logging (consultant's bread and butter) ──
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'log',
@@ -298,7 +292,7 @@ default_country = "US"
       '--set',
       'billable=yes',
     )
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'log',
@@ -313,7 +307,7 @@ default_country = "US"
       '--set',
       'billable=yes',
     )
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'log',
@@ -327,7 +321,7 @@ default_country = "US"
       'billable=yes',
     )
 
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'log',
@@ -342,7 +336,7 @@ default_country = "US"
       '--set',
       'billable=yes',
     )
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'log',
@@ -359,7 +353,7 @@ default_country = "US"
     )
 
     // ── Update retainer value mid-engagement (scope increase) ──
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'deal',
@@ -370,7 +364,7 @@ default_country = "US"
     )
 
     // ── Complete one engagement, another churns ──
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'deal',
@@ -381,7 +375,7 @@ default_country = "US"
       '--note',
       'Audit delivered, Robert happy',
     )
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'deal',
@@ -394,7 +388,7 @@ default_country = "US"
     )
 
     // ── Verify custom pipeline ──
-    const pipeline = ctx.runJSON<
+    const pipeline = await ctx.runJSON<
       Array<{ stage: string; count: number; value: number }>
     >('--config', configPath, 'pipeline', '--format', 'json')
     const stages = pipeline.map((s) => s.stage)
@@ -414,7 +408,7 @@ default_country = "US"
     expect(churned?.count).toBe(1) // Core
 
     // ── Reports with custom pipeline ──
-    const wonReport = ctx.runJSON<Array<{ title: string }>>(
+    const wonReport = await ctx.runJSON<Array<{ title: string }>>(
       '--config',
       configPath,
       'report',
@@ -425,7 +419,7 @@ default_country = "US"
     expect(wonReport).toHaveLength(1)
     expect(wonReport[0].title).toBe('Bright Financial Process Audit')
 
-    const lostReport = ctx.runJSON<Array<{ title: string }>>(
+    const lostReport = await ctx.runJSON<Array<{ title: string }>>(
       '--config',
       configPath,
       'report',
@@ -437,7 +431,7 @@ default_country = "US"
     expect(lostReport[0].title).toBe('Core Logistics Assessment')
 
     // ── Activity log for billing ──
-    const apexActivities = ctx.runJSON<
+    const apexActivities = await ctx.runJSON<
       Array<{ type: string; custom_fields: Record<string, string> }>
     >(
       '--config',
@@ -457,7 +451,7 @@ default_country = "US"
 
     // ── Contact by phone lookup ──
     const helen = JSON.parse(
-      ctx.runOK(
+      await ctx.runOK(
         '--config',
         configPath,
         'contact',
@@ -470,7 +464,7 @@ default_country = "US"
     expect(helen.name).toBe('Helen Marks')
 
     // ── Tag-based filtering ──
-    const retainerDeals = ctx.runJSON<Array<{ title: string }>>(
+    const retainerDeals = await ctx.runJSON<Array<{ title: string }>>(
       '--config',
       configPath,
       'deal',
@@ -484,7 +478,7 @@ default_country = "US"
 
     // ── Referral tracking via custom field ──
     const tanya = JSON.parse(
-      ctx.runOK(
+      await ctx.runOK(
         '--config',
         configPath,
         'contact',

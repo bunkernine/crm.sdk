@@ -1,44 +1,27 @@
 import { eq, sql } from 'drizzle-orm'
 import { ulid } from 'ulid'
 
-import { type CRMConfig, loadConfig } from '../config'
+import type { CRMConfig } from '../config'
 import type { DB } from '../db'
-import { openDB, upsertSearchIndex } from '../db'
-import type { Company, Contact, Deal } from '../drizzle-schema'
+import { upsertSearchIndex } from '../db'
+import type {
+  ActivityRow,
+  CompanyRow,
+  ContactRow,
+  DealRow,
+} from '../drizzle-schema'
 import * as schema from '../drizzle-schema'
-import { companyToRow, contactToRow, dealToRow, safeJSON } from '../format'
+import { die } from '../error'
+import type {
+  Activity,
+  Company,
+  Contact,
+  CustomFields,
+  Deal,
+  JsonValue,
+} from '../types'
 import { formatPhone, tryNormalizePhone } from '../normalize'
 import { resolveCompanyForLink, resolveContact } from '../resolve'
-
-// ── Global option extraction ──
-const rawArgv = process.argv.slice(2)
-export let gDb: string | undefined,
-  gConfig: string | undefined,
-  gFmt: string | undefined
-export const cleanArgv: string[] = []
-let _argIdx = 0
-while (_argIdx < rawArgv.length) {
-  const arg = rawArgv[_argIdx]
-  if (arg === '--db') {
-    _argIdx++
-    gDb = rawArgv[_argIdx]
-  } else if (arg === '--config') {
-    _argIdx++
-    gConfig = rawArgv[_argIdx]
-  } else if (arg === '--format') {
-    _argIdx++
-    gFmt = rawArgv[_argIdx]
-  } else if (arg !== '--no-color') {
-    cleanArgv.push(arg)
-  }
-  _argIdx++
-}
-
-export async function getCtx() {
-  const config = loadConfig({ configPath: gConfig, dbPath: gDb, format: gFmt })
-  const db = await openDB(config.database.path)
-  return { config, db, fmt: config.defaults.format }
-}
 
 export function makeId(prefix: string) {
   return `${prefix}_${ulid()}`
@@ -46,39 +29,23 @@ export function makeId(prefix: string) {
 export function now() {
   return new Date().toISOString()
 }
-export function die(msg: string): never {
-  console.error(msg)
-  process.exit(1)
-}
-export function collect(v: string, prev: string[]) {
-  prev.push(v)
-  return prev
+
+export function asList(v?: string | string[]): string[] {
+  if (!v) {
+    return []
+  }
+  return Array.isArray(v) ? v.map((s) => s.trim()).filter(Boolean) : [v.trim()]
 }
 
 export function confirmOrForce(force: boolean | undefined, label: string) {
   if (force) {
     return
   }
-  if (!process.stdin.isTTY) {
-    die(`Error: refusing to delete ${label} without --force (non-interactive)`)
-  }
-  const fs = require('node:fs')
-  process.stdout.write(`Delete ${label}? [y/N] `)
-  const buf = Buffer.alloc(64)
-  const fd = fs.openSync('/dev/tty', 'r')
-  try {
-    const n = fs.readSync(fd, buf, 0, 64, null)
-    const answer = buf.slice(0, n).toString().trim().toLowerCase()
-    if (answer !== 'y' && answer !== 'yes') {
-      die('Aborted')
-    }
-  } finally {
-    fs.closeSync(fd)
-  }
+  die(`Error: refusing to delete ${label} without --force (non-interactive)`)
 }
 
-export function parseKV(arr: string[]): Record<string, unknown> {
-  const r: Record<string, unknown> = {}
+export function parseKV(arr: string[] | undefined): CustomFields {
+  const r: CustomFields = {}
   for (const s of arr || []) {
     const i = s.indexOf('=')
     if (i > 0) {
@@ -86,7 +53,7 @@ export function parseKV(arr: string[]): Record<string, unknown> {
       const val = s.slice(i + 1).trim()
       if (key.startsWith('json:')) {
         try {
-          r[key.slice(5)] = JSON.parse(val)
+          r[key.slice(5)] = JSON.parse(val) as JsonValue
         } catch {
           die(`Error: invalid JSON for custom field "${key.slice(5)}"`)
         }
@@ -96,6 +63,75 @@ export function parseKV(arr: string[]): Record<string, unknown> {
     }
   }
   return r
+}
+
+export function asArray<T>(v: T[] | null | undefined): T[] {
+  return v ?? []
+}
+
+export function asCustom(v: CustomFields | null | undefined): CustomFields {
+  return v ?? {}
+}
+
+export function contactFromRow(c: ContactRow): Contact {
+  return {
+    id: c.id as Contact['id'],
+    name: c.name,
+    emails: asArray(c.emails),
+    phones: asArray(c.phones),
+    companies: asArray(c.companies),
+    linkedin: c.linkedin,
+    x: c.x,
+    bluesky: c.bluesky,
+    telegram: c.telegram,
+    tags: asArray(c.tags),
+    custom_fields: asCustom(c.custom_fields),
+    created_at: c.created_at,
+    updated_at: c.updated_at,
+  }
+}
+
+export function companyFromRow(c: CompanyRow): Company {
+  return {
+    id: c.id as Company['id'],
+    name: c.name,
+    websites: asArray(c.websites),
+    phones: asArray(c.phones),
+    tags: asArray(c.tags),
+    custom_fields: asCustom(c.custom_fields),
+    created_at: c.created_at,
+    updated_at: c.updated_at,
+  }
+}
+
+export function dealFromRow(d: DealRow): Deal {
+  return {
+    id: d.id as Deal['id'],
+    title: d.title,
+    value: d.value,
+    stage: d.stage,
+    contacts: asArray(d.contacts),
+    company: (d.company as Deal['company']) || null,
+    expected_close: d.expected_close,
+    probability: d.probability,
+    tags: asArray(d.tags),
+    custom_fields: asCustom(d.custom_fields),
+    created_at: d.created_at,
+    updated_at: d.updated_at,
+  }
+}
+
+export function activityFromRow(a: ActivityRow): Activity {
+  return {
+    id: a.id as Activity['id'],
+    type: a.type,
+    body: a.body,
+    contacts: asArray(a.contacts),
+    company: (a.company as Activity['company']) || null,
+    deal: (a.deal as Activity['deal']) || null,
+    custom_fields: asCustom(a.custom_fields),
+    created_at: a.created_at,
+  }
 }
 
 export async function getOrCreateCompanyId(
@@ -112,10 +148,10 @@ export async function getOrCreateCompanyId(
   await db.insert(schema.companies).values({
     id: cid,
     name: ref,
-    websites: '[]',
-    phones: '[]',
-    tags: '[]',
-    custom_fields: '{}',
+    websites: [],
+    phones: [],
+    tags: [],
+    custom_fields: {},
     created_at: n,
     updated_at: n,
   })
@@ -148,11 +184,11 @@ export async function getOrCreateContactId(
   await db.insert(schema.contacts).values({
     id: cid,
     name,
-    emails: isEmail ? JSON.stringify([ref]) : '[]',
-    phones: normalizedPhone ? JSON.stringify([normalizedPhone]) : '[]',
-    companies: '[]',
-    tags: '[]',
-    custom_fields: '{}',
+    emails: isEmail ? [ref] : [],
+    phones: normalizedPhone ? [normalizedPhone] : [],
+    companies: [],
+    tags: [],
+    custom_fields: {},
     created_at: n,
     updated_at: n,
   })
@@ -176,7 +212,7 @@ export async function checkDupeEmail(
     if (excludeId && c.id === excludeId) {
       continue
     }
-    const emails: string[] = safeJSON(c.emails)
+    const emails = asArray(c.emails)
     if (emails.some((e) => e.toLowerCase() === email.toLowerCase())) {
       die(
         `Error: duplicate email "${email}" — already belongs to ${c.name} (${c.id})`,
@@ -199,7 +235,7 @@ export async function checkDupePhone(
     if (excludeId && c.id === excludeId) {
       continue
     }
-    const phones: string[] = safeJSON(c.phones)
+    const phones = asArray(c.phones)
     if (phones.includes(phone)) {
       die(
         `Error: duplicate phone "${phone}" — already belongs to ${c.name} (${c.id})`,
@@ -218,7 +254,7 @@ export async function checkDupeWebsite(
     if (excludeId && co.id === excludeId) {
       continue
     }
-    const websites: string[] = safeJSON(co.websites)
+    const websites = asArray(co.websites)
     if (websites.includes(website)) {
       die(
         `Error: duplicate website "${website}" — already belongs to ${co.name} (${co.id})`,
@@ -246,124 +282,138 @@ export async function checkDupeSocial(
   }
 }
 
-export async function buildContactSearch(db: DB, c: Contact): Promise<string> {
-  const companyIds: string[] = safeJSON(c.companies)
+export async function buildContactSearch(
+  db: DB,
+  c: ContactRow,
+): Promise<string> {
+  const companyIds = asArray(c.companies)
   const allCompanies = await db.select().from(schema.companies)
   const companyNames = companyIds
     .map((id) => allCompanies.find((co) => co.id === id)?.name)
     .filter(Boolean)
   return [
     c.name,
-    c.emails,
-    c.phones,
+    JSON.stringify(asArray(c.emails)),
+    JSON.stringify(asArray(c.phones)),
     companyNames.join(' '),
     c.linkedin,
     c.x,
     c.bluesky,
     c.telegram,
-    JSON.stringify(safeJSON(c.custom_fields)),
-    c.tags,
+    JSON.stringify(asCustom(c.custom_fields)),
+    JSON.stringify(asArray(c.tags)),
   ]
     .filter(Boolean)
     .join(' ')
 }
 
-export function buildCompanySearch(co: Company): string {
+export function buildCompanySearch(co: CompanyRow): string {
   return [
     co.name,
-    co.websites,
-    co.phones,
-    JSON.stringify(safeJSON(co.custom_fields)),
-    co.tags,
+    JSON.stringify(asArray(co.websites)),
+    JSON.stringify(asArray(co.phones)),
+    JSON.stringify(asCustom(co.custom_fields)),
+    JSON.stringify(asArray(co.tags)),
   ]
     .filter(Boolean)
     .join(' ')
 }
 
-export function buildDealSearch(d: Deal): string {
-  return [d.title, d.stage, JSON.stringify(safeJSON(d.custom_fields)), d.tags]
+export function buildDealSearch(d: DealRow): string {
+  return [
+    d.title,
+    d.stage,
+    JSON.stringify(asCustom(d.custom_fields)),
+    JSON.stringify(asArray(d.tags)),
+  ]
     .filter(Boolean)
     .join(' ')
 }
 
 export async function contactDetail(
   db: DB,
-  c: Contact,
+  c: ContactRow,
   config: CRMConfig,
-): Promise<Record<string, unknown>> {
-  const row = contactToRow(c)
-  const phones: string[] = safeJSON(c.phones)
-  row._display_phones = phones.map((p) =>
-    formatPhone(p, config.phone.display, config.phone.default_country),
-  )
-  const companyIds: string[] = safeJSON(c.companies)
+): Promise<Record<string, JsonValue>> {
+  const row = contactFromRow(c)
+  const phones = asArray(c.phones)
+  const companyIds = asArray(c.companies)
   const allCompanies = await db.select().from(schema.companies)
-  row.companies = companyIds.map((id) => {
-    const co = allCompanies.find((x) => x.id === id)
-    return co ? co.name : id
-  })
   const allDeals = await db.select().from(schema.deals)
-  row.deals = allDeals
-    .filter((d) => {
-      const contacts: string[] = safeJSON(d.contacts)
-      return contacts.includes(c.id)
-    })
-    .map((d) => ({ id: d.id, title: d.title, stage: d.stage, value: d.value }))
-  return row
+  const deals = allDeals
+    .filter((d) => asArray(d.contacts).includes(c.id))
+    .map((d) => ({
+      id: d.id,
+      title: d.title,
+      stage: d.stage,
+      value: d.value,
+    }))
+  return {
+    ...row,
+    companies: companyIds.map((id) => {
+      const co = allCompanies.find((x) => x.id === id)
+      return co ? co.name : id
+    }),
+    deals,
+    _display_phones: phones.map((p) =>
+      formatPhone(p, config.phone.display, config.phone.default_country),
+    ),
+  } as unknown as Record<string, JsonValue>
 }
 
 export async function companyDetail(
   db: DB,
-  co: Company,
+  co: CompanyRow,
   config: CRMConfig,
-): Promise<Record<string, unknown>> {
-  const row = companyToRow(co)
-  const phones: string[] = safeJSON(co.phones)
-  row._display_phones = phones.map((p) =>
-    formatPhone(p, config.phone.display, config.phone.default_country),
-  )
+): Promise<Record<string, JsonValue>> {
+  const row = companyFromRow(co)
+  const phones = asArray(co.phones)
   const linkedContacts = await db.select().from(schema.contacts)
-  row.contacts = linkedContacts
-    .filter((ct) => {
-      const companies: string[] = safeJSON(ct.companies)
-      return companies.includes(co.id)
-    })
-    .map((ct) => ({ id: ct.id, name: ct.name, emails: safeJSON(ct.emails) }))
+  const contacts = linkedContacts
+    .filter((ct) => asArray(ct.companies).includes(co.id))
+    .map((ct) => ({ id: ct.id, name: ct.name, emails: asArray(ct.emails) }))
   const allDeals = await db
     .select()
     .from(schema.deals)
     .where(eq(schema.deals.company, co.id))
-  row.deals = allDeals.map((d) => ({
-    id: d.id,
-    title: d.title,
-    stage: d.stage,
-    value: d.value,
-  }))
-  return row
+  return {
+    ...row,
+    _display_phones: phones.map((p) =>
+      formatPhone(p, config.phone.display, config.phone.default_country),
+    ),
+    contacts,
+    deals: allDeals.map((d) => ({
+      id: d.id,
+      title: d.title,
+      stage: d.stage,
+      value: d.value,
+    })),
+  } as unknown as Record<string, JsonValue>
 }
 
 export async function dealDetail(
   db: DB,
-  d: Deal,
-): Promise<Record<string, unknown>> {
-  const row = dealToRow(d)
-  const contactIds: string[] = safeJSON(d.contacts)
+  d: DealRow,
+): Promise<Record<string, JsonValue>> {
+  const row = dealFromRow(d)
+  const contactIds = asArray(d.contacts)
   const contactPromises = contactIds.map(async (cid) => {
     const results = await db
       .select()
       .from(schema.contacts)
       .where(eq(schema.contacts.id, cid))
     const ct = results[0]
-    return ct ? { id: ct.id, name: ct.name, emails: safeJSON(ct.emails) } : null
+    return ct ? { id: ct.id, name: ct.name, emails: asArray(ct.emails) } : null
   })
-  row.contacts = (await Promise.all(contactPromises)).filter(Boolean)
+  const contacts = (await Promise.all(contactPromises)).filter(Boolean)
+  let company: { id: string; name: string } | null = null
   if (d.company) {
     const results = await db
       .select()
       .from(schema.companies)
       .where(eq(schema.companies.id, d.company))
     const co = results[0]
-    row.company = co ? { id: co.id, name: co.name } : null
+    company = co ? { id: co.id, name: co.name } : null
   }
   const stageChanges = await db
     .select()
@@ -383,58 +433,13 @@ export async function dealDetail(
   } else {
     history.push({ stage: d.stage, at: d.created_at })
   }
-  row.stage_history = history
-  row.notes = stageChanges
-    .filter((a) => a.body.includes('|'))
-    .map((a) => a.body)
-  return row
-}
-
-export function showEntity(detail: Record<string, unknown>, fmt: string) {
-  if (fmt === 'json') {
-    console.log(JSON.stringify(detail, null, 2))
-    return
-  }
-  const lines: string[] = []
-  for (const [k, v] of Object.entries(detail)) {
-    if (k === '_display_phones') {
-      continue
-    }
-    if (v === null || v === undefined) {
-      continue
-    }
-    if (Array.isArray(v)) {
-      if (v.length === 0) {
-        continue
-      }
-      if (typeof v[0] === 'object') {
-        lines.push(`${k}:`)
-        for (const item of v) {
-          lines.push(
-            `  ${typeof item === 'object' ? JSON.stringify(item) : item}`,
-          )
-        }
-      } else {
-        lines.push(`${k}: ${v.join(', ')}`)
-      }
-    } else if (typeof v === 'object') {
-      lines.push(`${k}:`)
-      for (const [sk, sv] of Object.entries(v as Record<string, unknown>)) {
-        lines.push(`  ${sk}: ${sv}`)
-      }
-    } else {
-      lines.push(`${k}: ${v}`)
-    }
-  }
-  // Replace raw E.164 phones with human-readable display format
-  const displayPhones = detail._display_phones as string[] | undefined
-  if (displayPhones?.length) {
-    const idx = lines.findIndex((l) => l.startsWith('phones:'))
-    if (idx >= 0) {
-      lines[idx] = `phones: ${displayPhones.join(', ')}`
-    }
-  }
-  console.log(lines.join('\n'))
+  return {
+    ...row,
+    contacts,
+    company,
+    stage_history: history,
+    notes: stageChanges.filter((a) => a.body.includes('|')).map((a) => a.body),
+  } as unknown as Record<string, JsonValue>
 }
 
 export function parseCSV(text: string): Record<string, string>[] {
@@ -513,8 +518,6 @@ export function levenshtein(a: string, b: string): number {
   return dp[la][lb]
 }
 
-/** Dice coefficient (bigram overlap). Handles prefix/suffix/containment cases
- *  that Levenshtein misses (e.g. "Acme" vs "Acme Inc" → 0.60). O(n+m). */
 export function diceCoefficient(a: string, b: string): number {
   if (a === b) {
     return 1
@@ -538,3 +541,5 @@ export function diceCoefficient(a: string, b: string): number {
   }
   return (2 * overlap) / (a.length - 1 + b.length - 1)
 }
+
+export { die }

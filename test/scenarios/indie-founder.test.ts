@@ -25,12 +25,12 @@ import { describe, expect, test } from 'bun:test'
 
 import { createTestContext } from '../helpers'
 
-describe('scenario: indie founder pipeline management', () => {
-  test('full sales cycle from cold outreach to closed-won', () => {
+describe('scenario: indie founder pipeline management', async () => {
+  test('full sales cycle from cold outreach to closed-won', async () => {
     const ctx = createTestContext()
 
     // ── Bootstrap: Add companies and contacts from a conference ──
-    ctx.runOK(
+    await ctx.runOK(
       'company',
       'add',
       '--name',
@@ -42,7 +42,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--set',
       'industry=Logistics',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'company',
       'add',
       '--name',
@@ -54,7 +54,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--set',
       'industry=Analytics',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'company',
       'add',
       '--name',
@@ -65,7 +65,7 @@ describe('scenario: indie founder pipeline management', () => {
       'climate-tech',
     )
 
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -79,7 +79,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--set',
       'title=CTO',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -93,7 +93,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--set',
       'title=VP Engineering',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -107,7 +107,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--set',
       'title=Head of Product',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -121,8 +121,7 @@ describe('scenario: indie founder pipeline management', () => {
     )
 
     // ── Create deals ──
-    const deal1 = ctx
-      .runOK(
+    const deal1 = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -139,10 +138,8 @@ describe('scenario: indie founder pipeline management', () => {
         '2026-06-15',
         '--tag',
         'annual',
-      )
-      .trim()
-    const deal2 = ctx
-      .runOK(
+      )).trim()
+    const deal2 = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -159,10 +156,8 @@ describe('scenario: indie founder pipeline management', () => {
         '2026-05-01',
         '--tag',
         'poc',
-      )
-      .trim()
-    const deal3 = ctx
-      .runOK(
+      )).trim()
+    const deal3 = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -179,11 +174,10 @@ describe('scenario: indie founder pipeline management', () => {
         '2026-09-01',
         '--tag',
         'enterprise',
-      )
-      .trim()
+      )).trim()
 
     // ── Log initial outreach activities ──
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'email',
       'Sent intro email after meeting at SaaStr',
@@ -192,7 +186,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--deal',
       deal1,
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'email',
       'Cold email — found via LinkedIn',
@@ -201,7 +195,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--deal',
       deal2,
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'meeting',
       'Met at Climate Tech Summit booth',
@@ -212,7 +206,7 @@ describe('scenario: indie founder pipeline management', () => {
     )
 
     // ── Move deals through pipeline ──
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       deal1,
@@ -221,7 +215,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--note',
       'Sarah confirmed budget exists',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       deal2,
@@ -232,7 +226,7 @@ describe('scenario: indie founder pipeline management', () => {
     )
 
     // Log follow-up activities
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'call',
       '30-min demo with Sarah, went well',
@@ -243,7 +237,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--set',
       'duration=30m',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       deal1,
@@ -252,10 +246,10 @@ describe('scenario: indie founder pipeline management', () => {
       '--note',
       'Sent pricing proposal',
     )
-    ctx.runOK('deal', 'edit', deal1, '--probability', '70')
+    await ctx.runOK('deal', 'edit', deal1, '--probability', '70')
 
     // DataPulse deal stalls — Marcus ghosts
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'email',
       'Follow-up #1 — no response',
@@ -264,7 +258,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--deal',
       deal2,
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'email',
       'Follow-up #2 — still nothing',
@@ -275,8 +269,8 @@ describe('scenario: indie founder pipeline management', () => {
     )
 
     // GreenOps adds a second stakeholder
-    ctx.runOK('deal', 'edit', deal3, '--add-contact', 'tom@greenops.co')
-    ctx.runOK(
+    await ctx.runOK('deal', 'edit', deal3, '--add-contact', 'tom@greenops.co')
+    await ctx.runOK(
       'deal',
       'move',
       deal3,
@@ -285,7 +279,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--note',
       'Priya got CEO buy-in',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'meeting',
       'Call with Priya and Tom — discussed timeline',
@@ -300,8 +294,8 @@ describe('scenario: indie founder pipeline management', () => {
     )
 
     // ── Close deals ──
-    ctx.runOK('deal', 'move', deal1, '--stage', 'negotiation')
-    ctx.runOK(
+    await ctx.runOK('deal', 'move', deal1, '--stage', 'negotiation')
+    await ctx.runOK(
       'deal',
       'move',
       deal1,
@@ -310,7 +304,7 @@ describe('scenario: indie founder pipeline management', () => {
       '--note',
       'Signed annual contract!',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       deal2,
@@ -321,7 +315,7 @@ describe('scenario: indie founder pipeline management', () => {
     )
 
     // ── Verify pipeline state ──
-    const pipeline = ctx.runJSON<
+    const pipeline = await ctx.runJSON<
       Array<{ stage: string; count: number; value: number }>
     >('pipeline', '--format', 'json')
     const won = pipeline.find((s) => s.stage === 'closed-won')
@@ -333,7 +327,7 @@ describe('scenario: indie founder pipeline management', () => {
     expect(qualified?.count).toBe(1) // GreenOps still in qualified
 
     // ── Verify reports ──
-    const wonReport = ctx.runJSON<Array<{ title: string }>>(
+    const wonReport = await ctx.runJSON<Array<{ title: string }>>(
       'report',
       'won',
       '--format',
@@ -342,7 +336,7 @@ describe('scenario: indie founder pipeline management', () => {
     expect(wonReport).toHaveLength(1)
     expect(wonReport[0].title).toBe('Streamline Annual')
 
-    const lostReport = ctx.runJSON<Array<{ title: string }>>(
+    const lostReport = await ctx.runJSON<Array<{ title: string }>>(
       'report',
       'lost',
       '--format',
@@ -352,7 +346,7 @@ describe('scenario: indie founder pipeline management', () => {
     expect(lostReport[0].title).toBe('DataPulse POC')
 
     // ── Filter and search ──
-    const decisionMakers = ctx.runJSON<Array<{ name: string }>>(
+    const decisionMakers = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--tag',
@@ -362,7 +356,7 @@ describe('scenario: indie founder pipeline management', () => {
     )
     expect(decisionMakers).toHaveLength(2)
 
-    const saasCompanies = ctx.runJSON<Array<{ name: string }>>(
+    const saasCompanies = await ctx.runJSON<Array<{ name: string }>>(
       'company',
       'list',
       '--tag',
@@ -372,7 +366,7 @@ describe('scenario: indie founder pipeline management', () => {
     )
     expect(saasCompanies).toHaveLength(2)
 
-    const bigDeals = ctx.runJSON<Array<{ title: string }>>(
+    const bigDeals = await ctx.runJSON<Array<{ title: string }>>(
       'deal',
       'list',
       '--min-value',
@@ -383,7 +377,7 @@ describe('scenario: indie founder pipeline management', () => {
     expect(bigDeals).toHaveLength(2) // Streamline (24k) and GreenOps (60k)
 
     // ── Search works across entities ──
-    const searchResults = ctx.runJSON<Array<{ type: string }>>(
+    const searchResults = await ctx.runJSON<Array<{ type: string }>>(
       'search',
       'streamline',
       '--format',

@@ -1,24 +1,13 @@
-import { spawnSync } from 'node:child_process'
+import type { CRMConfig, HookName, HookPayload } from './types'
 
-import type { CRMConfig } from './config.ts'
-
-export function runHook(
+export async function runHook(
   config: CRMConfig,
-  hookName: string,
-  data: Record<string, unknown>,
-): boolean {
-  const hookCmd = config.hooks[hookName]
-  if (!hookCmd) {
-    return true // no hook = success
+  hookName: HookName,
+  data: HookPayload,
+): Promise<boolean> {
+  const hook = config.hooks[hookName]
+  if (!hook) {
+    return true
   }
-
-  const jsonData = JSON.stringify(data)
-  const result = spawnSync(hookCmd, {
-    shell: true,
-    input: jsonData,
-    stdio: ['pipe', 'pipe', 'pipe'],
-    timeout: 30_000,
-  })
-
-  return result.status === 0
+  return hook(data)
 }

@@ -1,9 +1,10 @@
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 import type { CRMConfig } from './config'
 import type { DB } from './db'
 import * as schema from './drizzle-schema'
 import { dealToRow } from './format'
+import { asArray } from './lib/helpers'
 
 export function computePipeline(
   deals: { stage: string; value: number | null }[],
@@ -34,8 +35,7 @@ export async function computeStale(
   const allActivities = await db.select().from(schema.activities)
   for (const c of contacts) {
     const contactActivities = allActivities.filter((a) => {
-      const linked: string[] = JSON.parse(a.contacts || '[]')
-      return linked.includes(c.id)
+      return asArray(a.contacts).includes(c.id)
     })
     const last = contactActivities.reduce<string | null>(
       (max, a) => (max && max > a.created_at ? max : a.created_at),
@@ -238,7 +238,7 @@ export async function computeWon(db: DB, config: CRMConfig) {
     .where(eq(schema.deals.stage, wonStage))
   return Promise.all(
     deals.map(async (d) => {
-      const row: Record<string, unknown> = dealToRow(d)
+      const row: Record<string, unknown> = { ...dealToRow(d) }
       row.notes = await extractStageNotes(db, d.id, wonStage)
       return row
     }),
@@ -253,7 +253,7 @@ export async function computeLost(db: DB, config: CRMConfig) {
     .where(eq(schema.deals.stage, lostStage))
   return Promise.all(
     deals.map(async (d) => {
-      const row: Record<string, unknown> = dealToRow(d)
+      const row: Record<string, unknown> = { ...dealToRow(d) }
       row.notes = await extractStageNotes(db, d.id, lostStage)
       return row
     }),
@@ -265,12 +265,14 @@ async function extractStageNotes(
   dealId: string,
   stage: string,
 ): Promise<string> {
-  const actResults = (await db.all(
-    sql`SELECT body FROM activities WHERE deal = ${dealId} AND type = 'stage-change' AND body LIKE ${`%${stage}%`}`,
-  )) as { body: string | null }[]
-  const act = actResults[0]
+  const actResults = await db
+    .select({ body: schema.activities.body })
+    .from(schema.activities)
+    .where(eq(schema.activities.deal, dealId))
+  const match = actResults.find((a) => a.body.includes(stage))
+  const body = match?.body
   return (
-    act?.body
+    body
       ?.split('|')
       .slice(1)
       .map((s: string) => s.trim())

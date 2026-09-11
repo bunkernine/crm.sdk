@@ -4,8 +4,8 @@ import { join } from 'node:path'
 
 import { createTestContext } from './helpers.ts'
 
-describe('import contacts', () => {
-  test('import CSV', () => {
+describe('import contacts', async () => {
+  test('import CSV', async () => {
     const ctx = createTestContext()
     const csv = `name,email,phone,company,title,source,tags
 Jane Doe,jane@acme.com,+1-212-555-1234,Acme,CTO,conference,"hot-lead,enterprise"
@@ -13,9 +13,9 @@ John Smith,john@globex.com,,Globex,Engineer,inbound,`
     const csvPath = join(ctx.dir, 'contacts.csv')
     writeFileSync(csvPath, csv)
 
-    ctx.runOK('import', 'contacts', csvPath)
+    await ctx.runOK('import', 'contacts', csvPath)
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--format',
@@ -24,7 +24,7 @@ John Smith,john@globex.com,,Globex,Engineer,inbound,`
     expect(contacts).toHaveLength(2)
   })
 
-  test('import JSON', () => {
+  test('import JSON', async () => {
     const ctx = createTestContext()
     const data = [
       { name: 'Alice', email: 'alice@example.com', title: 'CEO' },
@@ -33,9 +33,9 @@ John Smith,john@globex.com,,Globex,Engineer,inbound,`
     const jsonPath = join(ctx.dir, 'contacts.json')
     writeFileSync(jsonPath, JSON.stringify(data))
 
-    ctx.runOK('import', 'contacts', jsonPath)
+    await ctx.runOK('import', 'contacts', jsonPath)
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--format',
@@ -44,16 +44,16 @@ John Smith,john@globex.com,,Globex,Engineer,inbound,`
     expect(contacts).toHaveLength(2)
   })
 
-  test('dry-run does not persist', () => {
+  test('dry-run does not persist', async () => {
     const ctx = createTestContext()
     const csv = 'name,email\nJane,jane@acme.com\n'
     const csvPath = join(ctx.dir, 'contacts.csv')
     writeFileSync(csvPath, csv)
 
-    const out = ctx.runOK('import', 'contacts', csvPath, '--dry-run')
+    const out = await ctx.runOK('import', 'contacts', csvPath, '--dry-run')
     expect(out).toContain('Jane')
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--format',
@@ -62,16 +62,16 @@ John Smith,john@globex.com,,Globex,Engineer,inbound,`
     expect(contacts).toHaveLength(0)
   })
 
-  test('skip-errors continues past bad rows', () => {
+  test('skip-errors continues past bad rows', async () => {
     const ctx = createTestContext()
     const csv =
       'name,email\nJane,jane@acme.com\n,invalid@example.com\nBob,bob@example.com\n'
     const csvPath = join(ctx.dir, 'contacts.csv')
     writeFileSync(csvPath, csv)
 
-    ctx.runOK('import', 'contacts', csvPath, '--skip-errors')
+    await ctx.runOK('import', 'contacts', csvPath, '--skip-errors')
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--format',
@@ -80,9 +80,9 @@ John Smith,john@globex.com,,Globex,Engineer,inbound,`
     expect(contacts).toHaveLength(2)
   })
 
-  test('update mode updates existing records', () => {
+  test('update mode updates existing records', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -97,24 +97,24 @@ John Smith,john@globex.com,,Globex,Engineer,inbound,`
     const csvPath = join(ctx.dir, 'contacts.csv')
     writeFileSync(csvPath, csv)
 
-    ctx.runOK('import', 'contacts', csvPath, '--update')
+    await ctx.runOK('import', 'contacts', csvPath, '--update')
 
-    const show = ctx.runOK('contact', 'show', 'jane@acme.com')
+    const show = await ctx.runOK('contact', 'show', 'jane@acme.com')
     expect(show).toContain('CTO')
   })
 })
 
-describe('import companies', () => {
-  test('import CSV', () => {
+describe('import companies', async () => {
+  test('import CSV', async () => {
     const ctx = createTestContext()
     const csv =
       'name,website,industry,size\nAcme Corp,acme.com,SaaS,50-200\nGlobex,globex.com,Manufacturing,1000+\n'
     const csvPath = join(ctx.dir, 'companies.csv')
     writeFileSync(csvPath, csv)
 
-    ctx.runOK('import', 'companies', csvPath)
+    await ctx.runOK('import', 'companies', csvPath)
 
-    const companies = ctx.runJSON<unknown[]>(
+    const companies = await ctx.runJSON<unknown[]>(
       'company',
       'list',
       '--format',
@@ -124,24 +124,24 @@ describe('import companies', () => {
   })
 })
 
-describe('import deals', () => {
-  test('import CSV', () => {
+describe('import deals', async () => {
+  test('import CSV', async () => {
     const ctx = createTestContext()
     const csv = 'title,value,stage\nDeal A,50000,lead\nDeal B,25000,qualified\n'
     const csvPath = join(ctx.dir, 'deals.csv')
     writeFileSync(csvPath, csv)
 
-    ctx.runOK('import', 'deals', csvPath)
+    await ctx.runOK('import', 'deals', csvPath)
 
-    const deals = ctx.runJSON<unknown[]>('deal', 'list', '--format', 'json')
+    const deals = await ctx.runJSON<unknown[]>('deal', 'list', '--format', 'json')
     expect(deals).toHaveLength(2)
   })
 })
 
-describe('export', () => {
-  test('export contacts CSV', () => {
+describe('export', async () => {
+  test('export contacts CSV', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -149,7 +149,7 @@ describe('export', () => {
       '--email',
       'jane@acme.com',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -158,14 +158,14 @@ describe('export', () => {
       'bob@globex.com',
     )
 
-    const out = ctx.runOK('export', 'contacts', '--format', 'csv')
+    const out = await ctx.runOK('export', 'contacts', '--format', 'csv')
     const lines = out.trim().split('\n')
     expect(lines).toHaveLength(3) // header + 2 rows
   })
 
-  test('export contacts JSON', () => {
+  test('export contacts JSON', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -174,7 +174,7 @@ describe('export', () => {
       'jane@acme.com',
     )
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'export',
       'contacts',
       '--format',
@@ -183,21 +183,21 @@ describe('export', () => {
     expect(contacts).toHaveLength(1)
   })
 
-  test('export deals JSON', () => {
+  test('export deals JSON', async () => {
     const ctx = createTestContext()
-    ctx.runOK('deal', 'add', '--title', 'Deal A', '--value', '50000')
+    await ctx.runOK('deal', 'add', '--title', 'Deal A', '--value', '50000')
 
-    const deals = ctx.runJSON<unknown[]>('export', 'deals', '--format', 'json')
+    const deals = await ctx.runJSON<unknown[]>('export', 'deals', '--format', 'json')
     expect(deals).toHaveLength(1)
   })
 
-  test('export all', () => {
+  test('export all', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-    ctx.runOK('company', 'add', '--name', 'Acme')
-    ctx.runOK('deal', 'add', '--title', 'Deal')
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
+    await ctx.runOK('company', 'add', '--name', 'Acme')
+    await ctx.runOK('deal', 'add', '--title', 'Deal')
 
-    const exported = ctx.runJSON<Record<string, unknown>>(
+    const exported = await ctx.runJSON<Record<string, unknown>>(
       'export',
       'all',
       '--format',
@@ -210,17 +210,17 @@ describe('export', () => {
   })
 })
 
-describe('import edge cases', () => {
-  test('CSV with missing columns treats them as empty', () => {
+describe('import edge cases', async () => {
+  test('CSV with missing columns treats them as empty', async () => {
     const ctx = createTestContext()
     // CSV has name but no email, phone, etc.
     const csv = 'name\nJane Doe\nBob Smith\n'
     const csvPath = join(ctx.dir, 'minimal.csv')
     writeFileSync(csvPath, csv)
 
-    ctx.runOK('import', 'contacts', csvPath)
+    await ctx.runOK('import', 'contacts', csvPath)
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--format',
@@ -229,30 +229,30 @@ describe('import edge cases', () => {
     expect(contacts).toHaveLength(2)
   })
 
-  test('CSV with extra columns maps to custom fields', () => {
+  test('CSV with extra columns maps to custom fields', async () => {
     const ctx = createTestContext()
     const csv =
       'name,email,department,hire_date\nJane,jane@acme.com,Engineering,2025-01-15\n'
     const csvPath = join(ctx.dir, 'extra.csv')
     writeFileSync(csvPath, csv)
 
-    ctx.runOK('import', 'contacts', csvPath)
+    await ctx.runOK('import', 'contacts', csvPath)
 
-    const show = ctx.runOK('contact', 'show', 'jane@acme.com')
+    const show = await ctx.runOK('contact', 'show', 'jane@acme.com')
     expect(show).toContain('department')
     expect(show).toContain('Engineering')
     expect(show).toContain('hire_date')
   })
 
-  test('CSV with phone normalization on import', () => {
+  test('CSV with phone normalization on import', async () => {
     const ctx = createTestContext()
     const csv = 'name,phone\nJane,+1-212-555-1234\nBob,(212) 555-6789\n'
     const csvPath = join(ctx.dir, 'phones.csv')
     writeFileSync(csvPath, csv)
 
-    ctx.runOK('import', 'contacts', csvPath)
+    await ctx.runOK('import', 'contacts', csvPath)
 
-    const contacts = ctx.runJSON<Array<{ phones: string[] }>>(
+    const contacts = await ctx.runJSON<Array<{ phones: string[] }>>(
       'contact',
       'list',
       '--format',
@@ -267,9 +267,9 @@ describe('import edge cases', () => {
     }
   })
 
-  test('import duplicate rows are skipped by default', () => {
+  test('import duplicate rows are skipped by default', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -282,10 +282,10 @@ describe('import edge cases', () => {
     const csvPath = join(ctx.dir, 'dupes.csv')
     writeFileSync(csvPath, csv)
 
-    const out = ctx.runOK('import', 'contacts', csvPath)
+    const out = await ctx.runOK('import', 'contacts', csvPath)
     expect(out).toContain('skip') // should report skipped
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--format',
@@ -294,32 +294,14 @@ describe('import edge cases', () => {
     expect(contacts).toHaveLength(2) // original Jane + new Bob
   })
 
-  test('import from stdin', () => {
+  test('import from JSON string', async () => {
     const ctx = createTestContext()
     const json = JSON.stringify([
       { name: 'Stdin Jane', email: 'stdin@acme.com' },
     ])
+    await ctx.runOK('import', 'contacts', json)
 
-    const proc = Bun.spawnSync(
-      [
-        'bun',
-        'run',
-        join(import.meta.dir, '..', 'src', 'cli.ts'),
-        '--db',
-        ctx.dbPath,
-        'import',
-        'contacts',
-        '-',
-      ],
-      {
-        cwd: ctx.dir,
-        env: { ...process.env, NO_COLOR: '1' },
-        stdin: Buffer.from(json),
-      },
-    )
-    expect(proc.exitCode).toBe(0)
-
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--format',
@@ -328,14 +310,14 @@ describe('import edge cases', () => {
     expect(contacts).toHaveLength(1)
   })
 
-  test('import empty file produces no records', () => {
+  test('import empty file produces no records', async () => {
     const ctx = createTestContext()
     const csvPath = join(ctx.dir, 'empty.csv')
     writeFileSync(csvPath, 'name,email\n')
 
-    ctx.runOK('import', 'contacts', csvPath)
+    await ctx.runOK('import', 'contacts', csvPath)
 
-    const contacts = ctx.runJSON<unknown[]>(
+    const contacts = await ctx.runJSON<unknown[]>(
       'contact',
       'list',
       '--format',
@@ -344,16 +326,16 @@ describe('import edge cases', () => {
     expect(contacts).toHaveLength(0)
   })
 
-  test('import companies with website normalization', () => {
+  test('import companies with website normalization', async () => {
     const ctx = createTestContext()
     const csv =
       'name,website\nAcme,https://www.ACME.COM\nGlobex,http://globex.com/\n'
     const csvPath = join(ctx.dir, 'companies-norm.csv')
     writeFileSync(csvPath, csv)
 
-    ctx.runOK('import', 'companies', csvPath)
+    await ctx.runOK('import', 'companies', csvPath)
 
-    const companies = ctx.runJSON<Array<{ website: string }>>(
+    const companies = await ctx.runJSON<Array<{ website: string }>>(
       'company',
       'list',
       '--format',
@@ -363,10 +345,10 @@ describe('import edge cases', () => {
   })
 })
 
-describe('roundtrip', () => {
-  test('export then import preserves data', () => {
+describe('roundtrip', async () => {
+  test('export then import preserves data', async () => {
     const ctx = createTestContext()
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -377,14 +359,14 @@ describe('roundtrip', () => {
       'vip',
     )
 
-    const exported = ctx.runOK('export', 'contacts', '--format', 'json')
+    const exported = await ctx.runOK('export', 'contacts', '--format', 'json')
     const exportPath = join(ctx.dir, 'exported.json')
     writeFileSync(exportPath, exported)
 
     const ctx2 = createTestContext()
-    ctx2.runOK('import', 'contacts', exportPath)
+    await ctx2.runOK('import', 'contacts', exportPath)
 
-    const show = ctx2.runOK('contact', 'show', 'jane@acme.com')
+    const show = await ctx2.runOK('contact', 'show', 'jane@acme.com')
     expect(show).toContain('Jane Doe')
     expect(show).toContain('vip')
   })

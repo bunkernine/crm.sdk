@@ -29,16 +29,14 @@ import { join } from 'node:path'
 
 import { createTestContext } from '../helpers'
 
-describe('idempotent add — contact', () => {
-  test('add-phone with value already on contact succeeds silently', () => {
+describe('idempotent add — contact', async () => {
+  test('add-phone with value already on contact succeeds silently', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
-      .trim()
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')).trim()
 
-    ctx.runOK('contact', 'edit', id, '--add-phone', '+12125551234')
+    await ctx.runOK('contact', 'edit', id, '--add-phone', '+12125551234')
 
-    const data = ctx.runJSON<{ phones: string[] }>(
+    const data = await ctx.runJSON<{ phones: string[] }>(
       'contact',
       'show',
       id,
@@ -48,12 +46,11 @@ describe('idempotent add — contact', () => {
     expect(data.phones).toHaveLength(1)
   })
 
-  test('add-phone with same number in national format succeeds silently', () => {
+  test('add-phone with same number in national format succeeds silently', async () => {
     const ctx = createTestContext()
     const configPath = join(ctx.dir, 'crm.toml')
     writeFileSync(configPath, `[phone]\ndefault_country = "US"\n`)
-    const id = ctx
-      .runOK(
+    const id = (await ctx.runOK(
         '--config',
         configPath,
         'contact',
@@ -62,10 +59,9 @@ describe('idempotent add — contact', () => {
         'Jane',
         '--phone',
         '+1-212-555-1234',
-      )
-      .trim()
+      )).trim()
 
-    ctx.runOK(
+    await ctx.runOK(
       '--config',
       configPath,
       'contact',
@@ -75,7 +71,7 @@ describe('idempotent add — contact', () => {
       '(212) 555-1234',
     )
 
-    const data = ctx.runJSON<{ phones: string[] }>(
+    const data = await ctx.runJSON<{ phones: string[] }>(
       '--config',
       configPath,
       'contact',
@@ -87,15 +83,13 @@ describe('idempotent add — contact', () => {
     expect(data.phones).toHaveLength(1)
   })
 
-  test('add-email with value already on contact succeeds silently', () => {
+  test('add-email with value already on contact succeeds silently', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')
-      .trim()
+    const id = (await ctx.runOK('contact', 'add', '--name', 'Jane', '--email', 'jane@acme.com')).trim()
 
-    ctx.runOK('contact', 'edit', id, '--add-email', 'jane@acme.com')
+    await ctx.runOK('contact', 'edit', id, '--add-email', 'jane@acme.com')
 
-    const data = ctx.runJSON<{ emails: string[] }>(
+    const data = await ctx.runJSON<{ emails: string[] }>(
       'contact',
       'show',
       id,
@@ -105,12 +99,12 @@ describe('idempotent add — contact', () => {
     expect(data.emails).toHaveLength(1)
   })
 
-  test('add-phone still rejects duplicate owned by another contact', () => {
+  test('add-phone still rejects duplicate owned by another contact', async () => {
     const ctx = createTestContext()
-    ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
-    const id2 = ctx.runOK('contact', 'add', '--name', 'Bob').trim()
+    await ctx.runOK('contact', 'add', '--name', 'Jane', '--phone', '+1-212-555-1234')
+    const id2 = (await ctx.runOK('contact', 'add', '--name', 'Bob')).trim()
 
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'contact',
       'edit',
       id2,
@@ -121,16 +115,14 @@ describe('idempotent add — contact', () => {
   })
 })
 
-describe('idempotent add — company', () => {
-  test('add-phone with value already on company succeeds silently', () => {
+describe('idempotent add — company', async () => {
+  test('add-phone with value already on company succeeds silently', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('company', 'add', '--name', 'Acme', '--phone', '+1-212-555-1234')
-      .trim()
+    const id = (await ctx.runOK('company', 'add', '--name', 'Acme', '--phone', '+1-212-555-1234')).trim()
 
-    ctx.runOK('company', 'edit', id, '--add-phone', '(212) 555-1234')
+    await ctx.runOK('company', 'edit', id, '--add-phone', '(212) 555-1234')
 
-    const data = ctx.runJSON<{ phones: string[] }>(
+    const data = await ctx.runJSON<{ phones: string[] }>(
       'company',
       'show',
       id,
@@ -140,15 +132,13 @@ describe('idempotent add — company', () => {
     expect(data.phones).toHaveLength(1)
   })
 
-  test('add-website with value already on company succeeds silently', () => {
+  test('add-website with value already on company succeeds silently', async () => {
     const ctx = createTestContext()
-    const id = ctx
-      .runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
-      .trim()
+    const id = (await ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')).trim()
 
-    ctx.runOK('company', 'edit', id, '--add-website', 'https://www.acme.com')
+    await ctx.runOK('company', 'edit', id, '--add-website', 'https://www.acme.com')
 
-    const data = ctx.runJSON<{ websites: string[] }>(
+    const data = await ctx.runJSON<{ websites: string[] }>(
       'company',
       'show',
       id,
@@ -158,12 +148,12 @@ describe('idempotent add — company', () => {
     expect(data.websites).toHaveLength(1)
   })
 
-  test('add-phone still rejects duplicate owned by another company', () => {
+  test('add-phone still rejects duplicate owned by another company', async () => {
     const ctx = createTestContext()
-    ctx.runOK('company', 'add', '--name', 'Acme', '--phone', '+1-212-555-1234')
-    const id2 = ctx.runOK('company', 'add', '--name', 'Globex').trim()
+    await ctx.runOK('company', 'add', '--name', 'Acme', '--phone', '+1-212-555-1234')
+    const id2 = (await ctx.runOK('company', 'add', '--name', 'Globex')).trim()
 
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'company',
       'edit',
       id2,
@@ -173,12 +163,12 @@ describe('idempotent add — company', () => {
     expect(result.stderr).toContain('duplicate')
   })
 
-  test('add-website still rejects duplicate owned by another company', () => {
+  test('add-website still rejects duplicate owned by another company', async () => {
     const ctx = createTestContext()
-    ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
-    const id2 = ctx.runOK('company', 'add', '--name', 'Globex').trim()
+    await ctx.runOK('company', 'add', '--name', 'Acme', '--website', 'acme.com')
+    const id2 = (await ctx.runOK('company', 'add', '--name', 'Globex')).trim()
 
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       'company',
       'edit',
       id2,
@@ -189,8 +179,8 @@ describe('idempotent add — company', () => {
   })
 })
 
-describe('scenario: messy real-world CRM setup', () => {
-  test('first-time setup with imperfect inputs and re-runs', () => {
+describe('scenario: messy real-world CRM setup', async () => {
+  test('first-time setup with imperfect inputs and re-runs', async () => {
     const ctx = createTestContext()
     const configPath = join(ctx.dir, 'crm.toml')
     writeFileSync(configPath, `[phone]\ndefault_country = "US"\n`)
@@ -199,8 +189,7 @@ describe('scenario: messy real-world CRM setup', () => {
     // ── Day 1: David sets up from memory, no international codes ──
 
     // First contact — phone without country code
-    const david = ctx
-      .runOK(
+    const david = (await ctx.runOK(
         ...cfg,
         'contact',
         'add',
@@ -210,11 +199,10 @@ describe('scenario: messy real-world CRM setup', () => {
         'david@aomni.com',
         '--phone',
         '3024828022',
-      )
-      .trim()
+      )).trim()
 
     // Verify it stored as E.164
-    const davidData = ctx.runJSON<{ phones: string[]; emails: string[] }>(
+    const davidData = await ctx.runJSON<{ phones: string[]; emails: string[] }>(
       ...cfg,
       'contact',
       'show',
@@ -226,8 +214,7 @@ describe('scenario: messy real-world CRM setup', () => {
     expect(davidData.emails[0]).toBe('david@aomni.com')
 
     // Add a company
-    const aomni = ctx
-      .runOK(
+    const aomni = (await ctx.runOK(
         ...cfg,
         'company',
         'add',
@@ -237,15 +224,13 @@ describe('scenario: messy real-world CRM setup', () => {
         'aomni.com',
         '--phone',
         '6505551000',
-      )
-      .trim()
+      )).trim()
 
     // Link David to company
-    ctx.runOK(...cfg, 'contact', 'edit', david, '--add-company', 'Aomni')
+    await ctx.runOK(...cfg, 'contact', 'edit', david, '--add-company', 'Aomni')
 
     // Add a second contact from a business card
-    const sarah = ctx
-      .runOK(
+    const sarah = (await ctx.runOK(
         ...cfg,
         'contact',
         'add',
@@ -257,10 +242,9 @@ describe('scenario: messy real-world CRM setup', () => {
         '4155559876',
         '--tag',
         'investor',
-      )
-      .trim()
+      )).trim()
 
-    ctx.runOK(
+    await ctx.runOK(
       ...cfg,
       'company',
       'add',
@@ -269,12 +253,12 @@ describe('scenario: messy real-world CRM setup', () => {
       '--website',
       'dataflow.io',
     )
-    ctx.runOK(...cfg, 'contact', 'edit', sarah, '--add-company', 'DataFlow')
+    await ctx.runOK(...cfg, 'contact', 'edit', sarah, '--add-company', 'DataFlow')
 
     // ── Day 2: David adds more info, forgets what he already entered ──
 
     // Re-add same email — should not fail
-    ctx.runOK(
+    await ctx.runOK(
       ...cfg,
       'contact',
       'edit',
@@ -282,7 +266,7 @@ describe('scenario: messy real-world CRM setup', () => {
       '--add-email',
       'david@aomni.com',
     )
-    const afterEmailReAdd = ctx.runJSON<{ emails: string[] }>(
+    const afterEmailReAdd = await ctx.runJSON<{ emails: string[] }>(
       ...cfg,
       'contact',
       'show',
@@ -293,7 +277,7 @@ describe('scenario: messy real-world CRM setup', () => {
     expect(afterEmailReAdd.emails).toHaveLength(1)
 
     // Add a personal email — should succeed
-    ctx.runOK(
+    await ctx.runOK(
       ...cfg,
       'contact',
       'edit',
@@ -301,7 +285,7 @@ describe('scenario: messy real-world CRM setup', () => {
       '--add-email',
       'dzz0615@gmail.com',
     )
-    const afterNewEmail = ctx.runJSON<{ emails: string[] }>(
+    const afterNewEmail = await ctx.runJSON<{ emails: string[] }>(
       ...cfg,
       'contact',
       'show',
@@ -313,7 +297,7 @@ describe('scenario: messy real-world CRM setup', () => {
     expect(afterNewEmail.emails).toContain('dzz0615@gmail.com')
 
     // Re-add same phone — should not fail
-    ctx.runOK(
+    await ctx.runOK(
       ...cfg,
       'contact',
       'edit',
@@ -321,7 +305,7 @@ describe('scenario: messy real-world CRM setup', () => {
       '--add-phone',
       '3024828022',
     )
-    const afterPhoneReAdd = ctx.runJSON<{ phones: string[] }>(
+    const afterPhoneReAdd = await ctx.runJSON<{ phones: string[] }>(
       ...cfg,
       'contact',
       'show',
@@ -332,7 +316,7 @@ describe('scenario: messy real-world CRM setup', () => {
     expect(afterPhoneReAdd.phones).toHaveLength(1)
 
     // Re-add phone in different format — should also not fail
-    ctx.runOK(
+    await ctx.runOK(
       ...cfg,
       'contact',
       'edit',
@@ -340,7 +324,7 @@ describe('scenario: messy real-world CRM setup', () => {
       '--add-phone',
       '+1-302-482-8022',
     )
-    const afterPhoneFmtReAdd = ctx.runJSON<{ phones: string[] }>(
+    const afterPhoneFmtReAdd = await ctx.runJSON<{ phones: string[] }>(
       ...cfg,
       'contact',
       'show',
@@ -351,7 +335,7 @@ describe('scenario: messy real-world CRM setup', () => {
     expect(afterPhoneFmtReAdd.phones).toHaveLength(1)
 
     // Combined: re-add existing phone AND add new email in one command
-    ctx.runOK(
+    await ctx.runOK(
       ...cfg,
       'contact',
       'edit',
@@ -361,7 +345,7 @@ describe('scenario: messy real-world CRM setup', () => {
       '--add-email',
       'dz@startup.com',
     )
-    const afterCombo = ctx.runJSON<{ emails: string[]; phones: string[] }>(
+    const afterCombo = await ctx.runJSON<{ emails: string[]; phones: string[] }>(
       ...cfg,
       'contact',
       'show',
@@ -376,7 +360,7 @@ describe('scenario: messy real-world CRM setup', () => {
     // ── Day 3: David edits company info with duplicate values ──
 
     // Re-add company website in different format
-    ctx.runOK(
+    await ctx.runOK(
       ...cfg,
       'company',
       'edit',
@@ -384,7 +368,7 @@ describe('scenario: messy real-world CRM setup', () => {
       '--add-website',
       'https://www.aomni.com',
     )
-    const aomniData = ctx.runJSON<{ websites: string[] }>(
+    const aomniData = await ctx.runJSON<{ websites: string[] }>(
       ...cfg,
       'company',
       'show',
@@ -395,8 +379,8 @@ describe('scenario: messy real-world CRM setup', () => {
     expect(aomniData.websites).toHaveLength(1)
 
     // Re-add company phone in different format
-    ctx.runOK(...cfg, 'company', 'edit', aomni, '--add-phone', '(650) 555-1000')
-    const aomniPhones = ctx.runJSON<{ phones: string[] }>(
+    await ctx.runOK(...cfg, 'company', 'edit', aomni, '--add-phone', '(650) 555-1000')
+    const aomniPhones = await ctx.runJSON<{ phones: string[] }>(
       ...cfg,
       'company',
       'show',
@@ -407,8 +391,8 @@ describe('scenario: messy real-world CRM setup', () => {
     expect(aomniPhones.phones).toHaveLength(1)
 
     // Add a genuinely new phone to the company
-    ctx.runOK(...cfg, 'company', 'edit', aomni, '--add-phone', '6505552000')
-    const aomniPhones2 = ctx.runJSON<{ phones: string[] }>(
+    await ctx.runOK(...cfg, 'company', 'edit', aomni, '--add-phone', '6505552000')
+    const aomniPhones2 = await ctx.runJSON<{ phones: string[] }>(
       ...cfg,
       'company',
       'show',
@@ -421,7 +405,7 @@ describe('scenario: messy real-world CRM setup', () => {
     // ── Cross-record dupes still enforced ──
 
     // Sarah's phone should not be assignable to David
-    const result = ctx.runFail(
+    const result = await ctx.runFail(
       ...cfg,
       'contact',
       'edit',
@@ -434,7 +418,7 @@ describe('scenario: messy real-world CRM setup', () => {
 
     // ── Verify final state ──
 
-    const contacts = ctx.runJSON<
+    const contacts = await ctx.runJSON<
       Array<{ name: string; emails: string[]; phones: string[] }>
     >(...cfg, 'contact', 'list', '--format', 'json')
     expect(contacts).toHaveLength(2)
@@ -448,7 +432,7 @@ describe('scenario: messy real-world CRM setup', () => {
     expect(sarahFinal.emails).toHaveLength(1)
     expect(sarahFinal.phones).toHaveLength(1)
 
-    const companies = ctx.runJSON<
+    const companies = await ctx.runJSON<
       Array<{ name: string; websites: string[]; phones: string[] }>
     >(...cfg, 'company', 'list', '--format', 'json')
     expect(companies).toHaveLength(2)

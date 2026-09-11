@@ -31,8 +31,8 @@ import { join } from 'node:path'
 
 import { createTestContext } from '../helpers'
 
-describe('scenario: agency BD with multi-stakeholder deals', () => {
-  test('import leads, manage multi-contact deals, filter by vertical', () => {
+describe('scenario: agency BD with multi-stakeholder deals', async () => {
+  test('import leads, manage multi-contact deals, filter by vertical', async () => {
     const ctx = createTestContext()
 
     // ── Import companies from CSV (migrating from a spreadsheet) ──
@@ -45,10 +45,10 @@ HealthBridge,healthbridge.org,healthcare,Digital Health,healthcare`
 
     const csvPath = join(ctx.dir, 'companies.csv')
     writeFileSync(csvPath, companyCsv)
-    ctx.runOK('import', 'companies', csvPath)
+    await ctx.runOK('import', 'companies', csvPath)
 
     // Verify import
-    const companies = ctx.runJSON<Array<{ name: string }>>(
+    const companies = await ctx.runJSON<Array<{ name: string }>>(
       'company',
       'list',
       '--format',
@@ -66,9 +66,9 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
 
     const contactCsvPath = join(ctx.dir, 'contacts.csv')
     writeFileSync(contactCsvPath, contactCsv)
-    ctx.runOK('import', 'contacts', contactCsvPath)
+    await ctx.runOK('import', 'contacts', contactCsvPath)
 
-    const contacts = ctx.runJSON<Array<{ name: string }>>(
+    const contacts = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--format',
@@ -78,7 +78,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
 
     // ── Create deals with multiple contacts per deal ──
     // MedVault: needs a second contact (procurement)
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -91,8 +91,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
       'title=Head of Procurement',
     )
 
-    const dealMed = ctx
-      .runOK(
+    const dealMed = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -117,11 +116,9 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
         'tech_stack=React/Node',
         '--set',
         'timeline=6 months',
-      )
-      .trim()
+      )).trim()
 
-    const dealFin = ctx
-      .runOK(
+    const dealFin = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -144,11 +141,9 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
         'tech_stack=React/Python',
         '--set',
         'timeline=4 months',
-      )
-      .trim()
+      )).trim()
 
-    const dealShop = ctx
-      .runOK(
+    const dealShop = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -169,11 +164,9 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
         'tech_stack=React Native',
         '--set',
         'timeline=3 months',
-      )
-      .trim()
+      )).trim()
 
-    ctx
-      .runOK(
+    await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -197,10 +190,9 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
         '--set',
         'timeline=8 months',
       )
-      .trim()
 
     // ── Move deals through stages with activities ──
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       dealShop,
@@ -209,7 +201,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
       '--note',
       'Amy confirmed budget',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       dealShop,
@@ -218,7 +210,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
       '--note',
       'Sent SOW',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       dealShop,
@@ -227,7 +219,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
       '--note',
       'Negotiating timeline',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       dealShop,
@@ -237,10 +229,10 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
       'Signed! Starting May 1',
     )
 
-    ctx.runOK('deal', 'move', dealFin, '--stage', 'qualified')
-    ctx.runOK('deal', 'move', dealFin, '--stage', 'proposal')
+    await ctx.runOK('deal', 'move', dealFin, '--stage', 'qualified')
+    await ctx.runOK('deal', 'move', dealFin, '--stage', 'proposal')
 
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       dealMed,
@@ -251,7 +243,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
     )
 
     // Log multi-contact activity
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'meeting',
       'Stakeholder alignment call',
@@ -268,7 +260,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
     )
 
     // ── Filtering by vertical (tag) ──
-    const fintechDeals = ctx.runJSON<Array<{ title: string }>>(
+    const fintechDeals = await ctx.runJSON<Array<{ title: string }>>(
       'deal',
       'list',
       '--tag',
@@ -278,7 +270,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
     )
     expect(fintechDeals).toHaveLength(2) // FinLedger + PayCircle
 
-    const healthcareDeals = ctx.runJSON<Array<{ title: string }>>(
+    const healthcareDeals = await ctx.runJSON<Array<{ title: string }>>(
       'deal',
       'list',
       '--tag',
@@ -289,7 +281,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
     expect(healthcareDeals).toHaveLength(1) // MedVault
 
     // ── Filter by company ──
-    const medvaultDeals = ctx.runJSON<Array<{ title: string }>>(
+    const medvaultDeals = await ctx.runJSON<Array<{ title: string }>>(
       'deal',
       'list',
       '--company',
@@ -300,7 +292,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
     expect(medvaultDeals).toHaveLength(1)
 
     // ── Filter by custom field ──
-    const reactDeals = ctx.runJSON<Array<{ title: string }>>(
+    const reactDeals = await ctx.runJSON<Array<{ title: string }>>(
       'deal',
       'list',
       '--filter',
@@ -311,7 +303,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
     expect(reactDeals).toHaveLength(3) // MedVault, FinLedger, ShopStream
 
     // ── Pipeline value by stage ──
-    const pipeline = ctx.runJSON<
+    const pipeline = await ctx.runJSON<
       Array<{ stage: string; count: number; value: number }>
     >('pipeline', '--format', 'json')
     const proposalStage = pipeline.find((s) => s.stage === 'proposal')
@@ -323,7 +315,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
     expect(wonStage?.value).toBe(45_000) // ShopStream
 
     // ── Big deals filter ──
-    const bigDeals = ctx.runJSON<Array<{ title: string }>>(
+    const bigDeals = await ctx.runJSON<Array<{ title: string }>>(
       'deal',
       'list',
       '--min-value',
@@ -334,7 +326,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
     expect(bigDeals).toHaveLength(2) // MedVault 120k, PayCircle 200k
 
     // ── Verify deal show includes multiple contacts ──
-    const dealDetail = ctx.runJSON<{ contacts: Array<{ name: string }> }>(
+    const dealDetail = await ctx.runJSON<{ contacts: Array<{ name: string }> }>(
       'deal',
       'show',
       dealMed,
@@ -346,7 +338,7 @@ Nina Patel,nina@healthbridge.org,HealthBridge,"champion,technical",Lead Architec
     expect(contactNames).toEqual(['David Park', 'Dr. Lisa Chen'])
 
     // ── Tag list shows vertical distribution ──
-    const tags = ctx.runJSON<Array<{ tag: string; count: number }>>(
+    const tags = await ctx.runJSON<Array<{ tag: string; count: number }>>(
       'tag',
       'list',
       '--format',

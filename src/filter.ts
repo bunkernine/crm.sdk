@@ -1,4 +1,4 @@
-import { safeJSON } from './format.ts'
+import type { CustomFields } from './types.ts'
 
 interface FilterCondition {
   field: string
@@ -62,9 +62,7 @@ function matchCondition(
   // Check in custom_fields if not found on top level
   if (fieldValue === undefined || fieldValue === null) {
     const custom =
-      typeof row.custom_fields === 'string'
-        ? safeJSON(row.custom_fields)
-        : row.custom_fields || {}
+      (row.custom_fields as CustomFields | undefined) || {}
     fieldValue = custom[field]
   }
 

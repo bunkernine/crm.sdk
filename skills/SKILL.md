@@ -1,478 +1,144 @@
 ---
-name: crm-cli
-description: Manage contacts, companies, deals, and pipeline with crm.cli — a headless CLI-first CRM backed by SQLite with a virtual filesystem interface
-install: curl -fsSL https://raw.githubusercontent.com/dzhng/crm.cli/main/install.sh | sh
+name: crm-sdk
+description: Operate a CRM (contacts, companies, deals, pipeline, search, reports) through the typed crm.sdk package — Postgres schema crm, no filesystem mount
 ---
 
-# crm.cli
+# crm.sdk
 
-A headless, CLI-first CRM. Contacts, deals, and pipeline in a single SQLite file — queryable from your terminal, composable with Unix tools, and mountable as a virtual filesystem.
+This package exists so an agent can run the CRM. Import `crm.sdk`, call `createCrm`, then use typed methods. Do not `ls` a mount, do not spawn a `crm` binary, do not invent SQL.
 
-## Install
+```ts
+import { createCrm } from 'crm.sdk'
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/dzhng/crm.cli/main/install.sh | sh
+const crm = await createCrm({ connectionString: process.env.DATABASE_URL! })
 ```
 
-This downloads the precompiled binary to `~/.local/bin` and installs mount dependencies (FUSE on Linux, Rust toolchain on macOS for NFS).
+Close with `await crm.close()` when the process is done.
 
-After install, make sure `~/.local/bin` is in your PATH:
+## When to use
 
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
+- Add / edit / show / merge contacts, companies, deals
+- Log notes, calls, meetings, emails
+- Search (`search` keyword, `find` word-overlap), dupes, stale/forecast/pipeline reports
+- Import CSV/JSON strings or in-memory records; export objects or csv/tsv/json/ids
 
-Verify:
+## createCrm options
 
-```bash
-crm --version
-```
+| Option | Meaning |
+|---|---|
+| `connectionString` | Postgres URL (required) |
+| `pipeline.stages` | Ordered stage names (default lead…closed-lost) |
+| `pipeline.won_stage` / `lost_stage` | Terminal stages for won/lost/stale/forecast |
+| `phone.default_country` | ISO country for national numbers |
+| `phone.display` | `international` \| `national` \| `e164` |
+| `hooks` | `Partial<Record<HookName, (data) => boolean \| Promise<boolean>>>` |
+| `search_limit` | Cap for search/find (default 20) |
 
-## Configuration
+Errors throw `CrmError` with the same strings the old CLI used on stderr.
 
-Optional. Create `crm.toml` in your project root or `~/.crm/config.toml`:
+`rm` requires `{ force: true }` or it throws (`refusing to delete … without --force`).
 
-```toml
-[database]
-path = "~/.crm/crm.db"
+## Lookup refs
 
-[pipeline]
-stages = ["lead", "qualified", "proposal", "negotiation", "closed-won", "closed-lost"]
-won_stage = "closed-won"
-lost_stage = "closed-lost"
+`show` / `edit` / `rm` / `tag` / `log` contact/company/deal fields accept:
 
-[defaults]
-format = "table"
-
-[phone]
-default_country = "US"
-display = "international"
-
-[mount]
-default_path = "~/crm"
-```
-
-Config is auto-discovered by walking up from the current directory. Override with `--config <path>` or `CRM_CONFIG` env var.
-
-## Global Flags
-
-Every command accepts:
-
-- `--db <path>` — SQLite database path (default: `~/.crm/crm.db`, env: `CRM_DB`)
-- `--format <fmt>` — Output format: `table`, `json`, `csv`, `tsv`, `ids`
-- `--config <path>` — TOML config file path
-- `--no-color` — Disable colored output
+- Prefixed id (`ct_…`, `co_…`, `dl_…`)
+- Email, phone (any common format → E.164), LinkedIn/X/Bluesky/Telegram URL or handle, company website
 
 ## Contacts
 
-### Create a contact
-
-```bash
-crm contact add --name "Jane Doe" \
-  --email jane@acme.com \
-  --phone "+1-212-555-1234" \
-  --linkedin linkedin.com/in/janedoe \
-  --company "Acme Corp" \
-  --tag hot-lead \
-  --set title=CTO
+```ts
+crm.contact.add({ name, email?, phone?, company?, tag?, linkedin?, x?, bluesky?, telegram?, set? })
+crm.contact.list({ tag?, company?, sort?, reverse?, limit?, offset?, filter? })
+crm.contact.show(ref)           // throws if not found
+crm.contact.edit(ref, { name?, addEmail?, rmEmail?, addPhone?, rmPhone?, addCompany?, rmCompany?, addTag?, rmTag?, linkedin?, x?, bluesky?, telegram?, set?, unset? })
+crm.contact.rm(ref, { force: true })
+crm.contact.merge(keepRef, dropRef)
 ```
 
-All flags are optional except `--name`. Phones are normalized to E.164, LinkedIn URLs are extracted to handles, companies are auto-created if they don't exist. `--email`, `--phone`, `--company`, `--tag`, and `--set` are all repeatable.
-
-Social handle flags: `--linkedin`, `--x`, `--bluesky`, `--telegram`. All accept raw handles or full URLs.
-
-### List contacts
-
-```bash
-crm contact list
-crm contact list --tag hot-lead --company "Acme Corp"
-crm contact list --filter "title~=CTO AND company=Acme" --sort name --limit 20
-crm contact list --format json | jq '.[].name'
-```
-
-Filter operators: `=`, `!=`, `~=` (contains), `>`, `<`. Combine with `AND` / `OR`.
-
-### Show a contact
-
-Look up by ID, email, phone, or social handle:
-
-```bash
-crm contact show ct_01J8ZVXB3K...
-crm contact show jane@acme.com
-crm contact show "+12125551234"
-crm contact show janedoe          # LinkedIn handle
-```
-
-### Edit a contact
-
-```bash
-crm contact edit jane@acme.com --name "Jane Smith"
-crm contact edit "+12125551234" --add-email jane2@acme.com --rm-tag old-tag
-crm contact edit janedoe --add-company "New Corp" --set title=CEO --unset source
-```
-
-Add/remove flags: `--add-email`, `--rm-email`, `--add-phone`, `--rm-phone`, `--add-company`, `--rm-company`, `--add-tag`, `--rm-tag`. Social handles set directly: `--linkedin`, `--x`, `--bluesky`, `--telegram`.
-
-### Delete a contact
-
-```bash
-crm contact rm jane@acme.com
-crm contact rm "+12125551234" --force    # skip confirmation
-crm contact rm janedoe                   # by social handle
-```
-
-### Merge contacts
-
-Merge two contacts into one. First contact survives, second is absorbed and deleted. Accepts any reference type:
-
-```bash
-crm contact merge ct_01A... ct_01B...
-crm contact merge jane@acme.com jane.doe@acme.com
-crm contact merge "+12125551234" "+14155559876"
-crm contact merge janedoe jane-doe-linkedin
-```
-
-Combines emails, phones, companies, tags, custom fields, and relinks all deals and activity.
+`name` is required on add. Phones normalize to E.164. Duplicate email/phone/social handle throws. `company` auto-creates stubs. `set` is `key=value` custom fields (`json:key={…}` for JSON).
 
 ## Companies
 
-### Create a company
-
-```bash
-crm company add --name "Acme Corp" \
-  --website acme.com \
-  --phone "+1-800-555-0000" \
-  --tag enterprise \
-  --set industry=SaaS
+```ts
+crm.company.add({ name, website?, phone?, tag?, set? })
+crm.company.list({ tag?, sort?, reverse?, limit?, offset?, filter? })
+crm.company.show(ref)
+crm.company.edit(ref, { name?, addWebsite?, rmWebsite?, addPhone?, rmPhone?, addTag?, rmTag?, set?, unset? })
+crm.company.rm(ref, { force: true })
+crm.company.merge(keepRef, dropRef)
 ```
-
-`--website`, `--phone`, `--tag`, `--set` are repeatable.
-
-### List / show / edit / delete
-
-```bash
-crm company list --tag enterprise
-crm company show acme.com                        # by website
-crm company show "+18005550000"                  # by phone
-crm company edit acme.com --name "Acme Inc" --add-website acme.io
-crm company rm acme.com --force
-```
-
-### Merge companies
-
-```bash
-crm company merge co_01A... co_01B...
-crm company merge acme.com acme.io
-crm company merge "+18005550000" "+18005550001"
-```
-
-Relinks all contacts and deals from second to first.
 
 ## Deals
 
-### Create a deal
-
-```bash
-crm deal add --title "Acme Enterprise" \
-  --value 50000 \
-  --stage qualified \
-  --contact jane@acme.com \
-  --company acme.com \
-  --expected-close 2026-06-15 \
-  --probability 60 \
-  --tag enterprise
+```ts
+crm.deal.add({ title, value?, stage?, contact?, company?, expectedClose?, probability?, tag?, set? })
+crm.deal.list({ stage?, minValue?, maxValue?, contact?, company?, tag?, filter?, sort?, reverse?, limit?, offset? })
+crm.deal.show(ref)
+crm.deal.edit(ref, { title?, value?, company?, expectedClose?, probability?, addContact?, rmContact?, addTag?, rmTag?, set?, unset? })
+crm.deal.move(ref, { stage, note? })
+crm.deal.rm(ref, { force: true })
+crm.pipeline()
 ```
 
-Contacts and companies are auto-created if they don't exist. `--contact` and `--tag` are repeatable.
+`title` required. `stage` must be in config stages. Move logs a `stage-change` activity.
 
-### List deals
+## Activity, tags
 
-```bash
-crm deal list --stage qualified --min-value 10000
-crm deal list --contact jane@acme.com --sort value --reverse
-crm deal list --format ids | wc -l    # count deals
+```ts
+crm.log({ type: 'note' | 'call' | 'meeting' | 'email', body, contact?, company?, deal?, at?, set? })
+crm.activity.list({ contact?, company?, deal?, type?, since?, sort?, reverse?, limit?, offset? })
+crm.tag(ref, ['vip', 'warm'])
+crm.untag(ref, ['warm'])
+crm.tag.list({ type?: 'contact' | 'company' | 'deal' })
 ```
 
-### Move a deal through the pipeline
+## Search vs find
 
-```bash
-crm deal move dl_01... --stage proposal --note "Sent pricing deck"
-crm deal move dl_01... --stage closed-won --note "Signed 2-year contract"
-```
+- **`search(query, { type? })`** — `to_tsvector('simple') @@ plainto_tsquery`; on failure, `content ILIKE '%query%'`.
+- **`find(query, { type?, limit?, threshold? })`** — word-overlap score on `search_index.content` (not embeddings).
 
-Stage transitions are recorded as activity with timestamps. Use `deal move`, not `deal edit --stage`.
-
-### Edit / delete
-
-```bash
-crm deal edit dl_01... --value 75000 --add-contact bob@acme.com --probability 80
-crm deal rm dl_01... --force
-```
-
-### Pipeline overview
-
-```bash
-crm pipeline
-```
-
-Shows count, total value, and weighted value per stage.
-
-## Activity Logging
-
-### Log an activity
-
-```bash
-crm log note "Had coffee with Jane, discussed Q3 expansion" --contact jane@acme.com
-crm log call "Demoed product, she wants a proposal" --contact jane@acme.com --deal dl_01...
-crm log meeting "Quarterly review" --company acme.com --at 2026-04-01
-crm log email "Sent follow-up pricing" --contact jane@acme.com --set channel=outbound
-```
-
-Types: `note`, `call`, `meeting`, `email`. Contacts and companies are auto-created. `--contact` is repeatable. `--at` overrides the timestamp.
-
-### List activities
-
-```bash
-crm activity list --contact jane@acme.com --since 2026-01-01
-crm activity list --type call --limit 10
-crm activity list --deal dl_01... --format json
-```
-
-## Tags
-
-```bash
-crm tag jane@acme.com hot-lead enterprise      # add tags
-crm untag jane@acme.com old-tag                 # remove tags
-crm tag list                                     # all tags with counts
-crm tag list --type contact                      # contact tags only
-```
-
-Tags work on contacts, companies, and deals.
-
-## Search
-
-### Exact keyword search (FTS5)
-
-```bash
-crm search "acme CTO"
-crm search "jane" --type contact
-```
-
-### Fuzzy / semantic search
-
-```bash
-crm find "fintech startup London"
-crm find "that CTO I met at the conference" --limit 5 --threshold 0.3
-```
-
-### Rebuild search index
-
-```bash
-crm index rebuild
-crm index status
-```
-
-Index updates automatically on writes. Manual rebuild only needed after corruption.
-
-## Duplicate Detection
-
-```bash
-crm dupes
-crm dupes --type contact --threshold 0.5
-crm dupes --type company --limit 20
-```
-
-Uses combined Levenshtein + Dice coefficient similarity. Detects: similar names, shared emails, shared phones, shared websites, shared social handles. Review then merge:
-
-```bash
-crm dupes --type contact
-# → Jane Doe ↔ J. Doe: similar name, shared email
-crm contact merge ct_01A... ct_01B...
+```ts
+crm.index.status()
+crm.index.rebuild()
+crm.dupes({ type?: 'contact' | 'company', threshold?, limit? })
 ```
 
 ## Reports
 
-```bash
-crm report pipeline                                  # stage counts & values
-crm report activity --period 30d --by type           # activity volume
-crm report stale --days 14 --type contact            # no recent activity
-crm report conversion --since 2026-01-01             # stage-to-stage rates
-crm report velocity --won-only                       # time per stage
-crm report forecast --period 2026-Q2                 # weighted forecast
-crm report won --period 90d                          # closed-won summary
-crm report lost --period 90d                         # closed-lost summary
+```ts
+crm.report.pipeline()
+crm.report.activity({ by?: 'type' | 'contact', period?: '7d' })
+crm.report.stale({ days?: 30, type?: 'contact' | 'deal' })
+crm.report.conversion({ since? })
+crm.report.velocity({ wonOnly? })
+crm.report.forecast({ period?: '2026-09' | '30d' })
+crm.report.won({ period? })
+crm.report.lost({ period? })
 ```
 
-## Import / Export
+## Import / export
 
-### Import from CSV or JSON
+Import takes a CSV/JSON **string** or `Record<string, string>[]`. Do not read a CRM mount tree.
 
-```bash
-crm import contacts leads.csv
-crm import contacts leads.json --update     # update existing by email match
-crm import companies companies.csv --dry-run
-crm import deals deals.csv --skip-errors
-cat data.json | crm import contacts -        # import from stdin
+```ts
+crm.import.contacts(input, { dryRun?, skipErrors?, update? })
+crm.import.companies(input, opts?)
+crm.import.deals(input, opts?)
+crm.export.contacts('json' | 'csv' | 'tsv' | 'ids')
+crm.export.companies(format?)
+crm.export.deals(format?)
+crm.export.all()
 ```
 
-CSV headers: `name`, `email`/`emails`, `phone`/`phones`, `company`/`companies`, `tags`, `linkedin`, `x`, `bluesky`, `telegram`. Unrecognized columns become custom fields.
+## Filters
 
-### Export
-
-```bash
-crm export contacts --format csv > contacts.csv
-crm export companies --format json > companies.json
-crm export deals --format tsv
-crm export all --format json > full-backup.json
-```
-
-## Virtual Filesystem (Mount)
-
-Mount the CRM as a live read/write filesystem. Any tool that reads files gets full CRM access — AI agents, grep, jq, vim, scripts.
-
-### Mount
-
-```bash
-crm mount ~/crm
-crm mount ~/crm --readonly
-```
-
-On Linux this uses FUSE. On macOS this uses an NFS v3 server (no kernel extensions needed).
-
-### Filesystem layout
-
-```
-~/crm/
-├── llm.txt                           # Instructions for AI agents
-├── contacts/
-│   ├── ct_01...jane-doe.json         # Contact JSON files
-│   ├── _by-email/                    # Lookup by email
-│   ├── _by-phone/                    # Lookup by E.164 phone
-│   ├── _by-linkedin/                 # Lookup by LinkedIn handle
-│   ├── _by-x/                        # Lookup by X handle
-│   ├── _by-company/                  # Grouped by company
-│   └── _by-tag/                      # Grouped by tag
-├── companies/
-│   ├── co_01...acme-corp.json
-│   ├── _by-website/
-│   ├── _by-phone/
-│   └── _by-tag/
-├── deals/
-│   ├── dl_01...acme-enterprise.json
-│   ├── _by-stage/
-│   ├── _by-company/
-│   └── _by-tag/
-├── activities/
-│   ├── _by-contact/
-│   ├── _by-company/
-│   ├── _by-deal/
-│   └── _by-type/
-├── reports/                          # Pre-computed analytics
-│   ├── pipeline.json
-│   ├── forecast.json
-│   ├── stale.json
-│   ├── conversion.json
-│   ├── velocity.json
-│   ├── won.json
-│   └── lost.json
-├── pipeline.json                     # Quick pipeline overview
-├── tags.json                         # All tags with counts
-└── search/                           # Search by reading files
-    └── <query>.json                  # cat search/"acme CTO".json
-```
-
-### Read via filesystem
-
-```bash
-ls ~/crm/contacts/
-cat ~/crm/contacts/ct_01...jane-doe.json | jq .
-cat ~/crm/contacts/_by-email/jane@acme.com.json
-cat ~/crm/deals/_by-stage/qualified/
-cat ~/crm/reports/forecast.json
-cat ~/crm/search/"enterprise deals".json
-```
-
-### Write via filesystem
-
-```bash
-# Create a contact
-echo '{"name":"Bob Smith","emails":["bob@globex.com"]}' > ~/crm/contacts/new.json
-
-# Update (read → modify → write back)
-cat ~/crm/contacts/ct_01...jane-doe.json | jq '.tags += ["vip"]' > ~/crm/contacts/ct_01...jane-doe.json
-
-# Delete
-rm ~/crm/contacts/ct_01...jane-doe.json
-```
-
-### Unmount
-
-```bash
-crm unmount ~/crm
-```
-
-### Static export (no mount needed)
-
-```bash
-crm export-fs ./crm-snapshot
-```
-
-Exports the same directory structure as a static copy — useful in containers or sandboxes where FUSE isn't available.
-
-## Bulk Operations
-
-Use `--format ids` to pipe into other commands:
-
-```bash
-# Tag all contacts from Acme as enterprise
-crm contact list --company "Acme Corp" --format ids | xargs -I{} crm tag {} enterprise
-
-# Move all qualified deals over $50k to proposal
-crm deal list --stage qualified --min-value 50000 --format ids | \
-  xargs -I{} crm deal move {} --stage proposal
-
-# Delete all stale contacts
-crm report stale --days 90 --type contact --format ids | xargs -I{} crm contact rm {} --force
-```
-
-## Custom Fields
-
-All entities support arbitrary key-value fields:
-
-```bash
-crm contact add --name "Jane" --set title=CTO --set source=conference
-crm contact edit jane@acme.com --set "json:score=85" --set "json:verified=true"
-crm contact edit jane@acme.com --unset source
-crm contact list --filter "title~=CTO"
-```
-
-Prefix with `json:` for typed values (numbers, booleans, arrays).
+`field = value`, `!=`, `~=` (contains), `>`, `<`, combined with `AND` / `OR`. Nested custom fields: `custom_fields.title = CTO`.
 
 ## Hooks
 
-Configure shell hooks in `crm.toml` that fire on mutations:
+`pre-` / `post-` for contact/company/deal add, edit, rm; `pre-deal-stage-change` / `post-deal-stage-change`; `pre-activity-add` / `post-activity-add`. Return `false` to abort.
 
-```toml
-[hooks]
-post-contact-add = "~/.crm/hooks/notify-slack.sh"
-post-deal-stage-change = "~/.crm/hooks/deal-moved.sh"
-pre-contact-rm = "~/.crm/hooks/confirm-delete.sh"
-```
+## IDs and JSON shape
 
-Entity data is passed as JSON on stdin. Pre-hooks abort on non-zero exit.
-
-Available hooks: `{pre,post}-{contact,company,deal}-{add,edit,rm}`, `{pre,post}-deal-stage-change`, `{pre,post}-activity-add`.
-
-## Tips for AI Agents
-
-- **Mount first:** `crm mount ~/crm` gives you filesystem access — read JSON files directly instead of running CLI commands
-- **Read `llm.txt`:** The mount point contains `llm.txt` with structure docs and tips
-- **Use `_by-*` directories** for fast lookups: `_by-email`, `_by-phone`, `_by-linkedin`, `_by-tag`, `_by-stage`
-- **Use `--format json`** for all CLI output when processing programmatically
-- **Use `--format ids`** + `xargs` for bulk operations
-- **Read `reports/`** for pre-computed analytics — don't recompute from raw data
-- **Search via filesystem:** `cat ~/crm/search/"your query".json`
-- **Write via filesystem:** Create/update entities by writing JSON files
-- **All JSON files are self-contained** — no need to join across files
-- **Phone numbers** accept any format on input; stored as E.164 internally
-- **Social handles** accept full URLs; stored as clean handles
+Entities use jsonb arrays (`emails`, `phones`, `tags`, …) and `custom_fields` objects. Wire names are snake_case (`custom_fields`, `expected_close`, `created_at`).

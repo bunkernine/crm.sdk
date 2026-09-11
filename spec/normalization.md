@@ -2,7 +2,7 @@
 
 ## The Three Tiers
 
-Data normalization is what justifies crm.cli over a spreadsheet. A CSV stores whatever you type. crm.cli normalizes on write so that lookups, deduplication, and display work regardless of how data was entered.
+Data normalization is what justifies crm.sdk over a spreadsheet. A CSV stores whatever you type. The SDK normalizes on write so that lookups, deduplication, and display work regardless of how data was entered.
 
 We landed on three normalization tiers with different strictness levels:
 
@@ -25,10 +25,10 @@ The reasoning behind each tier's strictness:
 We considered storing phone numbers as entered and normalizing at query time. Rejected because:
 
 1. **Dedup breaks.** `+1-212-555-1234` and `(212) 555-1234` look different but are the same number. Without canonical storage, duplicate detection requires normalizing every phone on every comparison.
-2. **Lookup breaks.** `crm contact show "212-555-1234"` needs to find a contact stored as `+1 (212) 555-1234`. Normalizing at query time means normalizing the query AND every stored value.
+2. **Lookup breaks.** `crm.contact.show('212-555-1234')` needs to find a contact stored as `+1 (212) 555-1234`. Normalizing at query time means normalizing the query AND every stored value.
 3. **Export breaks.** Exporting to CSV and re-importing would create duplicates if the formats don't match exactly.
 
-E.164 (`+12125551234`) is the canonical format that every phone library can parse. We normalize once on write, and everything downstream — lookups, dedup, display, FUSE filenames — works from the canonical value.
+E.164 (`+12125551234`) is the canonical format that every phone library can parse. We normalize once on write, and everything downstream — lookups, dedup, display — works from the canonical value.
 
 **Library choice:** libphonenumber-js (Google's libphonenumber ported to JS). It's the industry standard, handles every country format, and provides `isValidNumber()` for strict validation. We considered `awesome-phonenumber` but it's a wrapper around the same Google library with extra weight.
 
@@ -50,15 +50,13 @@ The decision: `https://www.ACME.COM/Labs` → `acme.com/labs`. Protocol and `www
 
 We hard-code LinkedIn, X, Bluesky, and Telegram as dedicated columns. We considered a generic `socials JSON` field (key-value of platform → handle) and rejected it.
 
-**The UNIQUE constraint argument:** SQLite enforces `UNIQUE` on columns, not on JSON keys. With a `socials JSON` field, two contacts could have the same LinkedIn handle and the DB wouldn't catch it. We'd need application-level uniqueness checks, which are race-condition-prone.
+**The UNIQUE constraint argument:** Postgres enforces `UNIQUE` on columns (and partial indexes), not on jsonb keys. With a `socials JSON` field, two contacts could have the same LinkedIn handle and the DB wouldn't catch it. We'd need application-level uniqueness checks, which are race-condition-prone.
 
-**The FUSE argument:** Each platform gets a `_by-linkedin/`, `_by-x/`, etc. directory in the FUSE mount. These are defined by the schema, not dynamically. A generic `socials` field would need a dynamic directory generator — more complex for marginal benefit.
+**The URL extraction argument:** Each platform has a specific URL format (`linkedin.com/in/<handle>`, `x.com/<handle>`, `bsky.app/profile/<handle>`, `t.me/<handle>`). A generic system would need a config-driven pattern registry. For 4 platforms, that's over-engineering.
 
-**The URL extraction argument:** Each platform has a specific URL format (`linkedin.com/in/<handle>`, `x.com/<handle>`, `bsky.app/profile/<handle>`, `t.me/<handle>`). A generic system would need a config-driven pattern registry. For 4 platforms, that's over-engineering. For 40 platforms, it would be justified. We're at 4.
+**The coverage argument:** These four cover professional networking. If someone needs GitHub or Mastodon, `--set github=octocat` works as a custom field. They lose UNIQUE enforcement and URL extraction — nice-to-have for a fifth platform, not essential.
 
-**The coverage argument:** These four cover professional networking. If someone needs GitHub or Mastodon, `--set github=octocat` works fine as a custom field. The only thing they lose is UNIQUE enforcement, URL extraction, and a FUSE index — which are "nice to have" for a fifth platform, not essential.
-
-Adding a fifth platform is: schema migration + new URL extraction regex + new FUSE `_by-*` directory + update tests. Straightforward but deliberate — you don't accidentally add social platforms.
+Adding a fifth platform is: schema migration + new URL extraction regex + update tests. Straightforward but deliberate — you don't accidentally add social platforms.
 
 ## Why handles are stored, not URLs
 
@@ -66,6 +64,6 @@ Adding a fifth platform is: schema migration + new URL extraction regex + new FU
 
 The reasoning: handles are the canonical identifier. URLs vary (`linkedin.com/in/janedoe`, `www.linkedin.com/in/janedoe/`, `https://linkedin.com/in/janedoe?locale=en_US`). The handle `janedoe` is stable across all URL variants.
 
-Storing the handle means: (a) UNIQUE constraint works on a single canonical value, (b) display is clean (`janedoe` not a full URL), (c) we can reconstruct the URL from the handle if needed (the URL pattern is known per platform), (d) lookup works regardless of input format — `crm contact show linkedin.com/in/janedoe` extracts the handle and matches against the stored value.
+Storing the handle means: (a) UNIQUE constraint works on a single canonical value, (b) display is clean (`janedoe` not a full URL), (c) we can reconstruct the URL from the handle if needed (the URL pattern is known per platform), (d) lookup works regardless of input format — `crm.contact.show('linkedin.com/in/janedoe')` extracts the handle and matches against the stored value.
 
 The extraction is best-effort: if we can't parse the input as a URL, we strip any leading `@` and store as-is. This handles edge cases like someone typing `@janedoe` or just `janedoe` directly.

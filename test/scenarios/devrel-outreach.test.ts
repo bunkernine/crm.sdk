@@ -30,12 +30,12 @@ import { describe, expect, test } from 'bun:test'
 
 import { createTestContext } from '../helpers'
 
-describe('scenario: devrel community and partnership tracking', () => {
-  test('track community members, conferences, and partnerships', () => {
+describe('scenario: devrel community and partnership tracking', async () => {
+  test('track community members, conferences, and partnerships', async () => {
     const ctx = createTestContext()
 
     // ── Add community contacts with social handles ──
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -55,7 +55,7 @@ describe('scenario: devrel community and partnership tracking', () => {
       '--set',
       'collab_interest=podcast',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -77,7 +77,7 @@ describe('scenario: devrel community and partnership tracking', () => {
       '--set',
       'collab_interest=livestream',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -95,7 +95,7 @@ describe('scenario: devrel community and partnership tracking', () => {
       '--set',
       'collab_interest=video',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -115,7 +115,7 @@ describe('scenario: devrel community and partnership tracking', () => {
       '--set',
       'collab_interest=zine',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'contact',
       'add',
       '--name',
@@ -135,7 +135,7 @@ describe('scenario: devrel community and partnership tracking', () => {
     )
 
     // ── Add partner companies ──
-    ctx.runOK(
+    await ctx.runOK(
       'company',
       'add',
       '--name',
@@ -149,7 +149,7 @@ describe('scenario: devrel community and partnership tracking', () => {
       '--set',
       'type=platform-partner',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'company',
       'add',
       '--name',
@@ -163,7 +163,7 @@ describe('scenario: devrel community and partnership tracking', () => {
       '--set',
       'type=integration-partner',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'company',
       'add',
       '--name',
@@ -177,8 +177,7 @@ describe('scenario: devrel community and partnership tracking', () => {
     )
 
     // ── Create partnership deals ──
-    const vercelDeal = ctx
-      .runOK(
+    const vercelDeal = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -195,11 +194,9 @@ describe('scenario: devrel community and partnership tracking', () => {
         'type=integration',
         '--set',
         'status=in-discussion',
-      )
-      .trim()
+      )).trim()
 
-    const kubeconDeal = ctx
-      .runOK(
+    const kubeconDeal = (await ctx.runOK(
         'deal',
         'add',
         '--title',
@@ -218,11 +215,10 @@ describe('scenario: devrel community and partnership tracking', () => {
         'type=speaking',
         '--set',
         'cfp_deadline=2026-06-01',
-      )
-      .trim()
+      )).trim()
 
     // ── Log community interactions ──
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'meeting',
       'DM about potential podcast collab',
@@ -231,7 +227,7 @@ describe('scenario: devrel community and partnership tracking', () => {
       '--set',
       'channel=twitter-dm',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'email',
       'Sent collab proposal for livestream series',
@@ -240,7 +236,7 @@ describe('scenario: devrel community and partnership tracking', () => {
       '--set',
       'channel=email',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'note',
       'Theo mentioned us in his latest video — great organic reach',
@@ -249,7 +245,7 @@ describe('scenario: devrel community and partnership tracking', () => {
       '--set',
       'channel=organic',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'log',
       'meeting',
       'Partnership kickoff call with Vercel team',
@@ -262,7 +258,7 @@ describe('scenario: devrel community and partnership tracking', () => {
     )
 
     // ── Move deals ──
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       vercelDeal,
@@ -271,7 +267,7 @@ describe('scenario: devrel community and partnership tracking', () => {
       '--note',
       'Vercel team interested in co-marketing',
     )
-    ctx.runOK(
+    await ctx.runOK(
       'deal',
       'move',
       kubeconDeal,
@@ -284,19 +280,19 @@ describe('scenario: devrel community and partnership tracking', () => {
     // ── Social handle lookups ──
     // Look up by X handle
     const kelsey = JSON.parse(
-      ctx.runOK('contact', 'show', 'kelseyhightower', '--format', 'json'),
+      await ctx.runOK('contact', 'show', 'kelseyhightower', '--format', 'json'),
     )
     expect(kelsey.name).toBe('Kelsey Hightower')
     expect(kelsey.x).toBe('kelseyhightower')
 
     // Look up by Bluesky handle
     const julia = JSON.parse(
-      ctx.runOK('contact', 'show', 'jvns.bsky.social', '--format', 'json'),
+      await ctx.runOK('contact', 'show', 'jvns.bsky.social', '--format', 'json'),
     )
     expect(julia.name).toBe('Julia Evans')
 
     // ── Filter by collaboration interest ──
-    const podcastCandidates = ctx.runJSON<Array<{ name: string }>>(
+    const podcastCandidates = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--filter',
@@ -307,7 +303,7 @@ describe('scenario: devrel community and partnership tracking', () => {
     expect(podcastCandidates).toHaveLength(1)
     expect(podcastCandidates[0].name).toBe('Kelsey Hightower')
 
-    const videoCreators = ctx.runJSON<Array<{ name: string }>>(
+    const videoCreators = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--filter',
@@ -319,7 +315,7 @@ describe('scenario: devrel community and partnership tracking', () => {
     expect(videoCreators[0].name).toBe('Theo Browne')
 
     // ── Tag-based queries ──
-    const speakers = ctx.runJSON<Array<{ name: string }>>(
+    const speakers = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--tag',
@@ -329,7 +325,7 @@ describe('scenario: devrel community and partnership tracking', () => {
     )
     expect(speakers).toHaveLength(3) // Kelsey, Cassidy, Nadia
 
-    const contentCreators = ctx.runJSON<Array<{ name: string }>>(
+    const contentCreators = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--tag',
@@ -339,7 +335,7 @@ describe('scenario: devrel community and partnership tracking', () => {
     )
     expect(contentCreators).toHaveLength(3) // Cassidy, Theo, Julia
 
-    const partners = ctx.runJSON<Array<{ name: string }>>(
+    const partners = await ctx.runJSON<Array<{ name: string }>>(
       'company',
       'list',
       '--tag',
@@ -350,17 +346,15 @@ describe('scenario: devrel community and partnership tracking', () => {
     expect(partners).toHaveLength(2) // Vercel, Railway
 
     // ── Bulk tag operation: tag all speakers as "kubecon-invite" ──
-    const speakerIds = ctx
-      .runOK('contact', 'list', '--tag', 'speaker', '--format', 'ids')
-      .trim()
+    const speakerIds = (await ctx.runOK('contact', 'list', '--tag', 'speaker', '--format', 'ids')).trim()
       .split('\n')
     expect(speakerIds).toHaveLength(3)
     for (const id of speakerIds) {
-      ctx.runOK('tag', id, 'kubecon-invite')
+      await ctx.runOK('tag', id, 'kubecon-invite')
     }
 
     // Verify bulk tag
-    const invites = ctx.runJSON<Array<{ name: string }>>(
+    const invites = await ctx.runJSON<Array<{ name: string }>>(
       'contact',
       'list',
       '--tag',
@@ -371,7 +365,7 @@ describe('scenario: devrel community and partnership tracking', () => {
     expect(invites).toHaveLength(3)
 
     // ── Export for reporting ──
-    const exported = ctx.runJSON<Record<string, unknown>[]>(
+    const exported = await ctx.runJSON<Record<string, unknown>[]>(
       'export',
       'contacts',
       '--format',
@@ -380,7 +374,7 @@ describe('scenario: devrel community and partnership tracking', () => {
     expect(exported.length).toBeGreaterThanOrEqual(5)
 
     // ── Search across the network ──
-    const frontendSearch = ctx.runJSON<Array<{ type: string }>>(
+    const frontendSearch = await ctx.runJSON<Array<{ type: string }>>(
       'search',
       'frontend',
       '--format',
@@ -389,7 +383,7 @@ describe('scenario: devrel community and partnership tracking', () => {
     expect(frontendSearch.length).toBeGreaterThanOrEqual(1) // Cassidy tagged frontend, Vercel tagged frontend
 
     // ── Activity report ──
-    const activityReport = ctx.runJSON<Array<{ type: string; count: number }>>(
+    const activityReport = await ctx.runJSON<Array<{ type: string; count: number }>>(
       'report',
       'activity',
       '--by',

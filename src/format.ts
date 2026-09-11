@@ -1,35 +1,61 @@
 import type { CRMConfig } from './config'
-import type { Activity, Company, Contact, Deal } from './drizzle-schema'
-import { formatPhone } from './normalize.ts'
+import type { ActivityRow, CompanyRow, ContactRow, DealRow } from './drizzle-schema'
+import {
+  activityFromRow,
+  companyFromRow,
+  contactFromRow,
+  dealFromRow,
+} from './lib/helpers'
+import { formatPhone } from './normalize'
+import type { Activity, Company, Contact, Deal, ExportFormat } from './types'
+
+export function contactToRow(c: ContactRow): Contact {
+  return contactFromRow(c)
+}
+
+export function companyToRow(c: CompanyRow): Company {
+  return companyFromRow(c)
+}
+
+export function dealToRow(d: DealRow): Deal {
+  return dealFromRow(d)
+}
+
+export function activityToRow(a: ActivityRow): Activity {
+  return activityFromRow(a)
+}
+
+export function asRecord(
+  obj: Contact | Company | Deal | Activity | Record<string, unknown>,
+): Record<string, unknown> {
+  return obj as unknown as Record<string, unknown>
+}
 
 export function formatOutput(
   data: Record<string, unknown> | Record<string, unknown>[],
-  format: string,
+  format: ExportFormat | string,
   config?: CRMConfig,
 ): string {
   switch (format) {
     case 'json':
       return JSON.stringify(data, null, 2)
     case 'csv':
-      return formatCSV(data as Record<string, unknown>[])
+      return formatCSV(Array.isArray(data) ? data : [data])
     case 'tsv':
-      return formatTSV(data as Record<string, unknown>[])
+      return formatTSV(Array.isArray(data) ? data : [data])
     case 'ids':
-      return formatIDs(data as Record<string, unknown>[])
+      return formatIDs(Array.isArray(data) ? data : [data])
     default:
       return formatTable(data, config)
   }
 }
 
 function formatIDs(data: Record<string, unknown>[]): string {
-  if (!Array.isArray(data)) {
-    return ''
-  }
   return data.map((r) => r.id).join('\n')
 }
 
 function formatCSV(data: Record<string, unknown>[]): string {
-  if (!Array.isArray(data) || data.length === 0) {
+  if (data.length === 0) {
     return ''
   }
   const keys = Object.keys(data[0])
@@ -59,7 +85,7 @@ function csvEscape(s: string): string {
 }
 
 function formatTSV(data: Record<string, unknown>[]): string {
-  if (!Array.isArray(data) || data.length === 0) {
+  if (data.length === 0) {
     return ''
   }
   const keys = Object.keys(data[0])
@@ -91,7 +117,6 @@ function formatTable(
   if (!Array.isArray(data)) {
     return formatEntityDetail(data)
   }
-  // Only show columns that have at least one non-empty value
   const keys = Object.keys(data[0]).filter((k) =>
     data.some((row) => {
       const v = row[k]
@@ -144,7 +169,6 @@ function displayValue(v: unknown, config?: CRMConfig): string {
     return JSON.stringify(v)
   }
   const s = String(v)
-  // Format E.164 phone numbers for display
   if (/^\+\d{7,15}$/.test(s)) {
     return formatPhone(
       s,
@@ -152,7 +176,6 @@ function displayValue(v: unknown, config?: CRMConfig): string {
       config?.phone?.default_country,
     )
   }
-  // Format ISO timestamps as readable local time
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) {
     const d = new Date(s)
     if (!Number.isNaN(d.getTime())) {
@@ -168,9 +191,12 @@ function displayValue(v: unknown, config?: CRMConfig): string {
   return s
 }
 
-function formatEntityDetail(entity: Record<string, unknown>): string {
+export function formatEntityDetail(entity: Record<string, unknown>): string {
   const lines: string[] = []
   for (const [key, value] of Object.entries(entity)) {
+    if (key === '_display_phones') {
+      continue
+    }
     if (value === null || value === undefined) {
       continue
     }
@@ -181,103 +207,39 @@ function formatEntityDetail(entity: Record<string, unknown>): string {
       if (typeof value[0] === 'object') {
         lines.push(`${key}:`)
         for (const item of value) {
-          lines.push(`  ${JSON.stringify(item)}`)
+          lines.push(
+            `  ${typeof item === 'object' ? JSON.stringify(item) : item}`,
+          )
         }
       } else {
         lines.push(`${key}: ${value.join(', ')}`)
       }
     } else if (typeof value === 'object') {
       lines.push(`${key}:`)
-      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-        lines.push(`  ${k}: ${v}`)
+      for (const [sk, sv] of Object.entries(value as Record<string, unknown>)) {
+        lines.push(`  ${sk}: ${sv}`)
       }
     } else {
       lines.push(`${key}: ${value}`)
     }
   }
+  const displayPhones = entity._display_phones as string[] | undefined
+  if (displayPhones?.length) {
+    const idx = lines.findIndex((l) => l.startsWith('phones:'))
+    if (idx >= 0) {
+      lines[idx] = `phones: ${displayPhones.join(', ')}`
+    }
+  }
   return lines.join('\n')
 }
 
-export function contactToRow(c: Contact): Record<string, unknown> {
-  const emails: string[] = safeJSON(c.emails)
-  const phones: string[] = safeJSON(c.phones)
-  const companies: string[] = safeJSON(c.companies)
-  const tags: string[] = safeJSON(c.tags)
-  const custom: Record<string, unknown> = safeJSON(c.custom_fields)
-  return {
-    id: c.id,
-    name: c.name,
-    emails,
-    phones,
-    companies,
-    linkedin: c.linkedin || null,
-    x: c.x || null,
-    bluesky: c.bluesky || null,
-    telegram: c.telegram || null,
-    tags,
-    custom_fields: custom,
-    created_at: c.created_at,
-    updated_at: c.updated_at,
+export function showEntity(detail: Record<string, unknown>, fmt: string) {
+  if (fmt === 'json') {
+    return JSON.stringify(detail, null, 2)
   }
+  return formatEntityDetail(detail)
 }
 
-export function companyToRow(c: Company): Record<string, unknown> {
-  return {
-    id: c.id,
-    name: c.name,
-    websites: safeJSON(c.websites),
-    phones: safeJSON(c.phones),
-    tags: safeJSON(c.tags),
-    custom_fields: safeJSON(c.custom_fields),
-    created_at: c.created_at,
-    updated_at: c.updated_at,
-  }
-}
-
-export function dealToRow(d: Deal): Record<string, unknown> {
-  return {
-    id: d.id,
-    title: d.title,
-    value: d.value ?? null,
-    stage: d.stage,
-    contacts: safeJSON(d.contacts),
-    company: d.company || null,
-    expected_close: d.expected_close || null,
-    probability: d.probability ?? null,
-    tags: safeJSON(d.tags),
-    custom_fields: safeJSON(d.custom_fields),
-    created_at: d.created_at,
-    updated_at: d.updated_at,
-  }
-}
-
-export function activityToRow(a: Activity): Record<string, unknown> {
-  return {
-    id: a.id,
-    type: a.type,
-    body: a.body,
-    contacts: safeJSON(a.contacts),
-    company: a.company || null,
-    deal: a.deal || null,
-    custom_fields: safeJSON(a.custom_fields),
-    created_at: a.created_at,
-  }
-}
-
-// biome-ignore lint/suspicious/noExplicitAny: parses unknown JSON strings into arbitrary structures
-export function safeJSON(val: string | null | undefined): any {
-  if (val === null || val === undefined) {
-    if (typeof val === 'string') {
-      return val
-    }
-    return Array.isArray(val) ? [] : {}
-  }
-  if (typeof val === 'string') {
-    try {
-      return JSON.parse(val)
-    } catch {
-      return val
-    }
-  }
-  return val
+export function asArray<T>(v: T[] | null | undefined): T[] {
+  return v ?? []
 }

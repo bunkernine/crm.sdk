@@ -9,6 +9,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +38,6 @@ jobs:
 
       - run: bun run lint
 
-      - name: Run tests (FUSE tests skip automatically without /dev/fuse)
-        run: bun test
+      - name: Run tests
+        run: bun test --timeout 30000 --max-concurrency 1
         timeout-minutes: 10
